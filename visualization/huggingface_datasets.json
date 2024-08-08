@@ -1,0 +1,18 @@
+{
+    "llm-blender/mix-instruct":
+    {
+        "instruction": "instruction",
+        "input": "input",
+        "output": "output",
+        "split_names": "train|validation|test"
+    },
+
+    "bigscience/P3":
+    {
+        "subset": "cnn_dailymail_3.0.0_sum_in_brief",
+        "input": "inputs_pretokenized",
+        "output": "targets_pretokenized",
+        "split_names": "train|validation|test"
+    }
+
+}

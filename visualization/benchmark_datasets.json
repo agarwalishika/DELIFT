@@ -1,0 +1,12 @@
+{
+    "cais/mmlu":
+    {
+        "subset": "all",
+        "instruction": "subject",
+        "input": "question|choices",
+        "output": "answer",
+        "split_names": "auxiliary_train|validation|test"
+
+    }
+
+}

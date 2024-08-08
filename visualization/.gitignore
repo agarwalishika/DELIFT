@@ -1,0 +1,6 @@
+qr_cache/*
+subset_selection/*
+__pycache__/*
+query_rewriting_data/*
+*.txt
+*.log
