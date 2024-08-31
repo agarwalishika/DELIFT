@@ -32,8 +32,14 @@ class InferencePEFT:
             # attn_implementation="flash_attention_2",
             torch_dtype=quant_storage_dtype,
             use_cache=False,
+            device_map='auto'
             # device_map={"": PartialState().process_index},
         )
+
+        # self.num_gpus = torch.cuda.device_count()
+        # if self.num_gpus > 1:
+        #     print(f"----------using {self.num_gpus}*GPUs----------")
+        #     model = torch.nn.DataParallel(model)
         
         # Prepare the model for k-bit training (if needed)
         # model = prepare_model_for_kbit_training(model)
@@ -93,11 +99,11 @@ class InferencePEFT:
         })
 
         peft_config = LoraConfig(
-            r=16,
-            lora_alpha=8,
+            r=8,
+            lora_alpha=32,
             target_modules="all-linear",
             bias="none",
-            lora_dropout=0.05,
+            lora_dropout=0.1,
             task_type="CAUSAL_LM",
         )
 
@@ -106,9 +112,9 @@ class InferencePEFT:
         training_arguments = TrainingArguments(
             output_dir=model_dir,
             num_train_epochs=20,
-            per_device_train_batch_size=8,
-            per_device_eval_batch_size=8,
-            gradient_accumulation_steps=4,
+            per_device_train_batch_size=1,
+            per_device_eval_batch_size=1,
+            gradient_accumulation_steps=1,
             evaluation_strategy="epoch",
             eval_steps=10,
             save_strategy="epoch",

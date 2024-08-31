@@ -71,20 +71,31 @@ def main(model_names, existing_data_name, new_data_name, threshold, subset_perce
             for utility_criteria in uc_labels:
                 
                 # define the experiment configuration (a shorthand code that helps store experiment results in the cache)
-                exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
-                print('NEW EXPERIMENT\n', exp_config, utility_criteria, '\n\n\n\n')
-                load_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, 
+                # exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
+                # print('NEW EXPERIMENT\n', exp_config, utility_criteria, '\n\n\n\n')
+                # load_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, 
+                #                     subset_percentage, threshold, labels, data, plotting, models, fn)
+                # calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
+                try:
+                    exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
+                    print('NEW EXPERIMENT\n', exp_config, utility_criteria, '\n\n\n\n')
+                    load_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, 
                                         subset_percentage, threshold, labels, data, plotting, models, fn)
-                calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
-
+                    calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
+                except Exception as e:
+                    with open('failures.txt', 'a+') as f:
+                        f.write(exp_config)
+                        f.write('\n\n')
+                        f.write(str(e))
+                        f.write('\n---------------------------------------------------------------------\n')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--threshold", type=float, default=0.7)
     parser.add_argument("--subset_percentage", type=float, default=0.3)
-    parser.add_argument("--existing_data_name", type=str, default="ibm_ft")
-    parser.add_argument("--new_data_name", type=str, default="gov")
-    parser.add_argument("--model_name", type=str, default="EleutherAI/gpt-neo-125m") #microsoft/Phi-3-mini-4k-instruct
+    parser.add_argument("--existing_data_name", type=str, default="mix-instruct")
+    parser.add_argument("--new_data_name", type=str, default="benchmark_mmlu")
+    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct") #microsoft/Phi-3-mini-4k-instruct
     args = parser.parse_args()
 
     main([args.model_name], args.existing_data_name, args.new_data_name, args.threshold, args.subset_percentage)

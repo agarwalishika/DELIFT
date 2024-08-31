@@ -17,17 +17,12 @@
 
 ### RUN EXPERIMENTS FOR OUR METHODOLOGY ###
 
-
-# jbsub -q x86_6h -cores 4+1 -mem 60g -require a100 -interactive bash
-# notify "got gpu benchmark"
-
-conda activate env3.10
-
 # use case 2: Given a model and a new dataset, fine-tune a model on a subset of points that improves the performance on a benchmark.
-python3 visualization/create_embeddings.py --use_case 2
-python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name mmlu
-# python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name mt-bench
+# python3 visualization/create_embeddings.py --use_case 2
+MODEL_NAME='microsoft/Phi-3-mini-4k-instruct'
+python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mmlu --model_name=$MODEL_NAME
+python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mt-bench --model_name=$MODEL_NAME
 
-notify "oh no"
+notify "oh no - bench"
 
 ### RUN EXPERIMENTS FOR BASELINE ###

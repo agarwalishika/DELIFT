@@ -9,7 +9,7 @@ def parse_file_name(dataset_name, exp_config):
 
 class FolderNames:
     # query rewriting datasets
-    qr_dataset_folder = 'query_rewriting_data'
+    qr_dataset_folder = '/u/ishikaa2/query_rewriting_data'
     qr_gov_data_file = os.path.join(qr_dataset_folder, "gov_data.json")
     qr_ibm_ft_data_file = os.path.join(qr_dataset_folder, "ibm_ft_data.json")
 

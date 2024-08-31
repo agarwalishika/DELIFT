@@ -101,13 +101,20 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             ds = process_column(ds, 'output')
 
             ds['data'] = "Instruction: " + ds['instruction'] + "\nInput: " + ds['input'] + "\nOutput: " + ds['output']
-            return ds.sample(frac=1.0)
+            return ds.sample(frac=0.03)
 
         subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
         split_keys = dataset_config[key]['split_names'].split("|")
-        train_ds = get_split_ds(split_keys[0], subset)
-        valid_ds = get_split_ds(split_keys[1], subset)
-        test_ds = get_split_ds(split_keys[2], subset)
+        if "natural" in key:
+            temp_ds = get_split_ds(split_keys[0], subset)
+            natural_valid = int(0.7 * len(train_ds))
+            valid_ds = temp_ds[natural_valid:]
+            train_ds = temp_ds[:natural_valid]
+            test_ds = get_split_ds(split_keys[1], subset)
+        else:
+            train_ds = get_split_ds(split_keys[0], subset)
+            valid_ds = get_split_ds(split_keys[1], subset)
+            test_ds = get_split_ds(split_keys[2], subset)
 
         new_key = key[key.rfind('/')+1:]
         full_dataset[new_key] = (train_ds, valid_ds, test_ds)
@@ -265,21 +272,23 @@ def main(args):
     
     print('finding embeddings')
     for key in tqdm(datasets.keys()):
-        train_ds = find_embedding(datasets[key][0]['data'])
-        valid_ds = find_embedding(datasets[key][1]['data'])
-        test_ds = find_embedding(datasets[key][2]['data'])
-
-        embeddings = fit_tsne(torch.concat((train_ds, valid_ds, test_ds)))
-
-        t = len(train_ds)
-        v = len(valid_ds)
-        datasets[key][0]['vis_dims'] = [embeddings[:t][x] for x in range(len(datasets[key][0]))]
-        datasets[key][1]['vis_dims'] =  [embeddings[t:t+v][x] for x in range(len(datasets[key][1]))]
-        datasets[key][2]['vis_dims'] = [embeddings[t+v:][x] for x in range(len(datasets[key][2]))]
-
         pkl_name = key + ".pkl"
-        with open(os.path.join(spec_fn.dataset_pkl_folder, pkl_name), 'wb+') as f:
-            pickle.dump(datasets[key], f)
+        print(os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)))
+        if not os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)):
+            train_ds = find_embedding(datasets[key][0]['data'])
+            valid_ds = find_embedding(datasets[key][1]['data'])
+            test_ds = find_embedding(datasets[key][2]['data'])
+
+            embeddings = fit_tsne(torch.concat((train_ds, valid_ds, test_ds)))
+
+            t = len(train_ds)
+            v = len(valid_ds)
+            datasets[key][0]['vis_dims'] = [embeddings[:t][x] for x in range(len(datasets[key][0]))]
+            datasets[key][1]['vis_dims'] =  [embeddings[t:t+v][x] for x in range(len(datasets[key][1]))]
+            datasets[key][2]['vis_dims'] = [embeddings[t+v:][x] for x in range(len(datasets[key][2]))]
+
+            with open(os.path.join(spec_fn.dataset_pkl_folder, pkl_name), 'wb+') as f:
+                pickle.dump(datasets[key], f)
 
     del datasets
     vis_dims, data = get_matrix(spec_fn.dataset_pkl_folder)

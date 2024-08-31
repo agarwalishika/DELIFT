@@ -4,10 +4,10 @@ from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 import torch
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
 class Models:
-    def __init__(self, embedding_model_name="BAAI/bge-large-en-v1.5", language_model_name="EleutherAI/gpt-neo-125m", sentence_model_name="paraphrase-MiniLM-L6-v2"):
+    def __init__(self, embedding_model_name="BAAI/bge-large-en-v1.5", language_model_name="microsoft/Phi-3-mini-128k-instruct", sentence_model_name="paraphrase-MiniLM-L6-v2"):
         """
         Since multiple files requires model and tokenizer objects, instead of creating multiple instances in each file, we can use the Models class to keep the same instances across all the files.
         """
@@ -18,7 +18,7 @@ class Models:
         self.sentence_model_name = sentence_model_name
 
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(embedding_model_name)
-        self.embedding_model = AutoModel.from_pretrained(embedding_model_name, device_map="auto")
+        self.embedding_model = AutoModel.from_pretrained(embedding_model_name).to(device)
         self.embedding_model.eval()
 
         if self.embedding_tokenizer.pad_token is None:
@@ -27,7 +27,11 @@ class Models:
 
 
         # define language models for inference
-        self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name, device_map="auto")
+        self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name).to(device)
+        if torch.cuda.device_count() > 1:
+            print(f"Using {torch.cuda.device_count()} GPUs!")
+            self.language_model = torch.nn.DataParallel(self.language_model)
+        
         ## left padding for generation
         self.language_tokenizer = AutoTokenizer.from_pretrained(language_model_name, padding_side='left')
         self.language_tokenizer.pad_token = self.language_tokenizer.eos_token

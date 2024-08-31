@@ -3,7 +3,6 @@ import numpy as np
 import evaluate
 import torch
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
 
@@ -58,7 +57,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=3):
         batch_prompts = prompts[j:j+batch_size]
         batch_ref = references[j:j+batch_size]
 
-        tokenized_output = tokenizer(batch_prompts, padding=True, return_tensors='pt').to(device)
+        tokenized_output = tokenizer(batch_prompts, padding=True, return_tensors='pt').to(model.device)
         tokenized_output['input_ids'] = tokenized_output['input_ids'][:, :tokenizer.model_max_length-100]
         tokenized_output['attention_mask'] = tokenized_output['attention_mask'][:, :tokenizer.model_max_length-100]
         gen_tokens = model.generate(
@@ -69,7 +68,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=3):
             top_k=100, 
             top_p=0.7,
             temperature=0.8
-        )
+        ).cpu()
 
         # decode
         for x in range(batch_size):

@@ -315,7 +315,7 @@ def main():
         # Define the model, datasets and performance thresholds
         col1, col2 = st.columns(2, vertical_alignment="center")
         with col1:
-            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "EleutherAI/gpt-neo-125m") #"microsoft/Phi-3-mini-4k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
+            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "microsoft/Phi-3-mini-4k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
 
             col1a, col1b = st.columns(2, vertical_alignment="center")
             with col1a:
