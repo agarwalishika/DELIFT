@@ -63,7 +63,7 @@ class DataObject():
         self.use_case = case
 
         if case == DataObjectConstants.DATA_OBJECT_SAME_DATSET: # mix instruct
-            self.init_same_dataset(existing_data[0], existing_vis_dims[0], existing_point_labels[0], new_data[1], new_vis_dims[1], new_point_labels[1])
+            self.init_same_dataset(existing_data[0], existing_vis_dims[0], existing_point_labels[0], new_data[0], new_vis_dims[0], new_point_labels[0])
         elif case == DataObjectConstants.DATA_OBJECT_NEW_VERSION: # ibm and gov qr
             self.init_new_version(existing_data, existing_vis_dims, existing_point_labels, new_data, new_vis_dims, new_point_labels)
         elif case == DataObjectConstants.DATA_OBJECT_BENCHMARK: # benchmark

@@ -13,7 +13,7 @@ class ModelDependentICLUtility:
             tokenizer: Tokenizer corresponding to the pre-trained language model.
             device (str): Device to run the model on ('cuda' or 'cpu').
         """
-        self.model = model.to(device)  # Convert the model to the specified device
+        self.model = model  # Convert the model to the specified device
         self.tokenizer = tokenizer
         self.device = device
 
@@ -29,10 +29,11 @@ class ModelDependentICLUtility:
         Returns:
             distances (list): List of distances for each input example.
         """
+        input_ids = input_ids.to(self.model.device)
+        attention_mask = attention_mask.to(self.model.device)
         with torch.no_grad():  # Disable gradient calculation for inference
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
         logits_all = outputs.logits  # Get the logits from the model outputs
-
         distances = []
 
         for logits, input_id, token_type_id in zip(logits_all, input_ids, token_type_ids):
@@ -62,6 +63,7 @@ class ModelDependentICLUtility:
             distance = torch.norm(pred_probs - 1.0) / torch.sqrt(num_valid_tokens)
             distances.append(distance)
 
+        input_ids.to('cpu'), attention_mask.to('cpu')
         return distances
 
     def prepare_batch_inputs(self, prompts, responses, example_prompts, example_responses, 
@@ -143,7 +145,7 @@ class ModelDependentICLUtility:
                 attention_masks.append(combined_attention_mask)
                 token_type_ids.append(combined_token_type_ids)
 
-            return torch.tensor(input_ids).to(self.device), torch.tensor(attention_masks).to(self.device), torch.tensor(token_type_ids).to(self.device)
+            return torch.tensor(input_ids), torch.tensor(attention_masks), torch.tensor(token_type_ids)
 
         # Prepend instruction to each prompt without ICL examples
         prompts_with_instruction_no_icl = [f"Instruction: {instruction_no_icl}\n\n\nQuery: {prompt}\n" for prompt in prompts]
@@ -226,6 +228,8 @@ class ModelDependentICLUtility:
         n_valid = len(valid_prompts)
         utility_kernel = np.zeros((n_valid, n_train))
 
+        self.model = self.model.to('cuda')
+
         # Compute distances without ICL examples
         distances_without_icl = [0] * n_valid
         for batch, indices in zip(without_icl_batches, batched_original_indices):
@@ -255,5 +259,7 @@ class ModelDependentICLUtility:
             min_val = utility_kernel.min()
             max_val = utility_kernel.max()
             utility_kernel = (utility_kernel - min_val) / (max_val - min_val)
+        
+        self.model = self.model.to('cpu')
         
         return utility_kernel

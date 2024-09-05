@@ -175,7 +175,9 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
     if os.path.exists(exp_file):
         with open(exp_file, 'rb') as f:
             generated_text = pickle.load(f)
-        return calculate_similarity(generated_text, test_references, score=score, return_invidiual=False), generated_text
+        return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_invidiual=False), generated_text
+    # else:
+    #     return [-1.0], None
 
     # if ICL is the subset quality evaluation technique
     if "ICL" in exp_config:
@@ -195,7 +197,7 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
     # if PEFT is the subset quality evaluation technique
     if "PEFT" in exp_config:
         peft_model_dir = fn.peft_ft_model(data.dataset_config_code, exp_config)
-        lora_model = AutoModelForCausalLM.from_pretrained(peft_model_dir).to(device)
+        lora_model = AutoModelForCausalLM.from_pretrained(peft_model_dir)#.to(device)
         metrics, generated_text = perform_inference(lora_model, models.language_tokenizer, test_prompts, test_references)
     
     with open(exp_file, 'wb+') as f:
@@ -324,13 +326,13 @@ def main():
                 subset_percentage = correct_value(float(st.text_input("Size of subset (percentage of training set) (in [0, 1]):", "0.3")))
         
         # Set up data variables for general experiments
-        fn = FolderNames(model_name)
+        fn = FolderNames(model_name, 'same_data_cache')
         models = Models(language_model_name=model_name)
         labels = [label.split('.')[0] for label in os.listdir(fn.dataset_pkl_folder) if 'all_data' not in label]
 
         with col2:
-            existing_data_name = st.multiselect("Select existing dataset(s)", labels, default=labels[-1])[0]
-            new_data_name = st.multiselect("Select dataset(s) to add in", labels, default=labels[0])[0]
+            existing_data_name = st.multiselect("Select existing dataset(s)", labels, default=labels[1])[0]
+            new_data_name = st.multiselect("Select dataset(s) to add in", labels, default=labels[1])[0]
 
         # Set up data variables for the experiments
         with open(fn.visualization_cache_file, 'rb') as f:
@@ -347,8 +349,8 @@ def main():
                             np.array([f"{new_data_ind}-{num_new_train+i}" for i in range(len(all_data[new_data_ind][1]))]),
                             np.array([f"{new_data_ind}-{num_new_train+num_new_valid+i}" for i in range(len(all_data[new_data_ind][2]))])]
         if existing_data_name == new_data_name:
-            data = DataObject(existing_data_name, existing_data_ind, new_data_name, new_data_ind, all_data[existing_data_ind][0], vis_dims[existing_data_ind][0], exist_point_labels[0],
-                        all_data[new_data_ind][1], vis_dims[new_data_ind][1], new_point_labels[1],
+            data = DataObject([existing_data_name], [existing_data_ind], [new_data_name], [new_data_ind], [all_data[existing_data_ind][0]], [vis_dims[existing_data_ind][0]], [exist_point_labels[0]],
+                        [all_data[new_data_ind][1]], [vis_dims[new_data_ind][1]], [new_point_labels[1]],
                         case=DataObjectConstants.DATA_OBJECT_SAME_DATSET)
         elif "benchmark" in new_data_name:
             data = DataObject(existing_data_name, existing_data_ind, new_data_name, new_data_ind, all_data[existing_data_ind], vis_dims[existing_data_ind], exist_point_labels,

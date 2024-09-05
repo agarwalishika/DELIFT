@@ -5,11 +5,9 @@ import numpy as np
 import torch
 import argparse
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 class InferenceICL():
     def __init__(self, model, tokenizer) -> None:
-        self.embedding_model = model.to(device)
+        self.embedding_model = model
         self.embedding_tokenizer = tokenizer
 
     def create_icl_inference_data(self, training_data, validation_prompts, validation_references):
@@ -32,11 +30,13 @@ class InferenceICL():
         return prompts, references
 
     def get_embeddings(self, prompt):
-        encoded_input = self.embedding_tokenizer(prompt, padding=True, truncation=True, return_tensors='pt').to(device)
+        self.embedding_model = self.embedding_model.to('cuda')
+        encoded_input = self.embedding_tokenizer(prompt, padding=True, truncation=True, return_tensors='pt').to(self.embedding_model.device)
         with torch.no_grad():
             model_output = self.embedding_model(**encoded_input)
             sentence_embeddings = model_output[0][:, 0]
         sentence_embeddings = torch.nn.functional.normalize(sentence_embeddings, p=2, dim=1).squeeze()
+        self.embedding_model.to('cpu')
         return sentence_embeddings
 
     def find_nearest_neighbors(self, query, pool=None, pool_embeddings=None, return_sim=False, k=5):

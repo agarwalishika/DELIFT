@@ -33,8 +33,72 @@ def calculate_similarity(predictions, references, score="rouge", return_invidiua
     return np.array(metrics)
     
 
+def perform_inference(model, tokenizer, prompts, references, batch_size=4):
+    """
+    Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
 
-def perform_inference(model, tokenizer, prompts, references, batch_size=3):
+    Args:
+        model: AutoModelForCausalLM instance
+        tokenizer: AutoTokenizer instance with left padding enabled
+        prompts: list of prompts
+        references: list of references
+    Return:
+        metrics: np array of ROUGE-1 metrics of size 1x|prompts|
+        generated_text: array of size 1x|prompts| of generated responses from the given LM
+    """
+    max_length = min(tokenizer.model_max_length, 2048) - 100
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to('cuda')
+
+    all_metrics = []
+    all_gen_texts = []
+
+    # Process prompts in batches
+    for i in tqdm(range(0, len(prompts), batch_size)):
+        batch_prompts = prompts[i:i+batch_size]
+        batch_references = references[i:i+batch_size]
+
+        # Modify prompts in place
+        for j, prompt in enumerate(batch_prompts):
+            batch_prompts[j] = prompt + "\n### Response:\n"
+
+        tokenized_output = tokenizer(
+            list(batch_prompts), 
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+            return_tensors='pt'
+        ).to(model.device)
+
+        with torch.no_grad():
+            gen_tokens = model.generate(
+                **tokenized_output,
+                max_new_tokens=100,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+                do_sample=True,
+                min_p=0.1,
+                temperature=0.2,
+            )
+
+        # Extract only the new tokens
+        new_tokens = gen_tokens[:, tokenized_output.input_ids.shape[1]:]
+        
+        # Decode only the new tokens
+        batch_gen_texts = tokenizer.batch_decode(new_tokens, skip_special_tokens=True)
+
+        batch_gen_texts = [gen_text.replace("\n", " ") for gen_text in batch_gen_texts]
+        # Calculate metrics for the batch
+        batch_metrics = [rouge_metric.compute(predictions=[gen_text], references=[ref.strip()])['rouge1'] for gen_text, ref in zip(batch_gen_texts, batch_references)]
+
+        all_metrics.extend(batch_metrics)
+        all_gen_texts.extend(batch_gen_texts)
+
+    model.to('cpu')
+    return np.array(all_metrics), all_gen_texts
+
+
+def perform__inference(model, tokenizer, prompts, references, batch_size=3):
     """
     Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
 

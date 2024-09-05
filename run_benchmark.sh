@@ -18,11 +18,11 @@
 ### RUN EXPERIMENTS FOR OUR METHODOLOGY ###
 
 # use case 2: Given a model and a new dataset, fine-tune a model on a subset of points that improves the performance on a benchmark.
-# python3 visualization/create_embeddings.py --use_case 2
+python3 visualization/create_embeddings.py --use_case 2
 MODEL_NAME='microsoft/Phi-3-mini-4k-instruct'
+# MODEL_NAME='Qwen/Qwen2-7B-Instruct'
+
 python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mmlu --model_name=$MODEL_NAME
-python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mt-bench --model_name=$MODEL_NAME
+python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mt_bench_human_judgments --model_name=$MODEL_NAME
 
-notify "oh no - bench"
-
-### RUN EXPERIMENTS FOR BASELINE ###
+notify "experiments done - bench"

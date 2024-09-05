@@ -4,8 +4,10 @@ from folder_names import FolderNames
 from plotting import Plotting
 from models import Models
 import numpy as np
+import traceback
 import argparse
 import pickle
+import torch
 import os
 
 def main(model_names, existing_data_name, new_data_name, threshold, subset_percentage):
@@ -47,8 +49,8 @@ def main(model_names, existing_data_name, new_data_name, threshold, subset_perce
     
         # create a DataObject instance
         if existing_data_name == new_data_name:
-            data = DataObject(existing_data_name, existing_data_ind, new_data_name, new_data_ind, all_data[existing_data_ind], vis_dims[existing_data_ind], exist_point_labels,
-                        all_data[new_data_ind], vis_dims[new_data_ind], new_point_labels,
+            data = DataObject([existing_data_name], [existing_data_ind], [new_data_name], [new_data_ind], [all_data[existing_data_ind][0]], [vis_dims[existing_data_ind][0]], [exist_point_labels[0]],
+                        [all_data[new_data_ind][1]], [vis_dims[new_data_ind][1]], [new_point_labels[1]],
                         case=DataObjectConstants.DATA_OBJECT_SAME_DATSET)
         elif "benchmark" in new_data_name:
             data = DataObject(existing_data_name, existing_data_ind, new_data_name, new_data_ind, all_data[existing_data_ind], vis_dims[existing_data_ind], exist_point_labels,
@@ -84,10 +86,15 @@ def main(model_names, existing_data_name, new_data_name, threshold, subset_perce
                     calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
                 except Exception as e:
                     with open('failures.txt', 'a+') as f:
-                        f.write(exp_config)
+                        f.write(f'{exp_config} on {existing_data_name} and {new_data_name}')
                         f.write('\n\n')
-                        f.write(str(e))
+                        f.write(str(traceback.format_exc()))
                         f.write('\n---------------------------------------------------------------------\n')
+                
+                # device = cuda.get_current_device()
+                # device.reset()
+                # cuda.close()
+                # torch.cuda.is_available()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

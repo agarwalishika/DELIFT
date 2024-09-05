@@ -281,12 +281,12 @@ class Plotting():
             utility_file = self.fn.model_ind_utility_file(data.dataset_config_code)
             if not os.path.exists(utility_file):
                 print(utility_criteria, ': Calculating model independent utility...')
-                new_tensor = mi.batch_inference(self.models.embedding_model, self.models.embedding_tokenizer, list(data.train_new_data), device)
-                existing_tensor = mi.batch_inference(self.models.embedding_model, self.models.embedding_tokenizer, list(data.train_existing_data), device)
+                new_tensor = mi.batch_inference(self.models.embedding_model, self.models.embedding_tokenizer, list(data.train_new_data))
+                existing_tensor = mi.batch_inference(self.models.embedding_model, self.models.embedding_tokenizer, list(data.train_existing_data))
 
-                data_sijs = model_ind.compute_pairwise_similarities(new_tensor, sparse=False, batch_size=2000, device=device,
+                data_sijs = model_ind.compute_pairwise_similarities(new_tensor, sparse=False, batch_size=2000, device='cuda',
                                 metric='cosine', scaling='additive').numpy()
-                private_sijs = model_ind.compute_pairwise_similarities(new_tensor, existing_tensor, sparse=False, batch_size=2000, device=device,
+                private_sijs = model_ind.compute_pairwise_similarities(new_tensor, existing_tensor, sparse=False, batch_size=2000, device='cuda',
                                 metric='cosine', scaling='additive').numpy()
 
                 with open(utility_file, 'wb+') as f:
@@ -378,19 +378,13 @@ class Plotting():
 
             # if there is no PEFT model stored on the given data (in the DataObject), fine-tune and store it
             if not os.path.exists(peft_model_dir):
-                old_model_name = self.models.model_name
-                del self.models
-                torch.cuda.empty_cache()
-
-                peft = InferencePEFT(old_model_name)
+                peft = InferencePEFT(self.models.model_name)
                 peft.fine_tune_model(data, peft_model_dir)
-
-                self.models = Models(old_model_name)
                 
 
             # if there is no inference performed on the PEFT model, perform and store the results
             if not os.path.exists(experiment_file):
-                lora_model = AutoModelForCausalLM.from_pretrained(peft_model_dir).to('cuda:1')
+                lora_model = AutoModelForCausalLM.from_pretrained(peft_model_dir)
                 metrics, generated_text = perform_inference(lora_model, self.models.language_tokenizer, data.valid_new_prompts, data.valid_new_references)
                 with open(experiment_file, "wb+") as f:
                     pickle.dump(generated_text, f)

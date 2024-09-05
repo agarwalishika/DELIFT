@@ -1,7 +1,8 @@
 import torch
 
-def batch_inference(model, tokenizer, input, device):
-    encoded_input = tokenizer(input, padding=True, truncation=True, return_tensors='pt').to(device)
+def batch_inference(model, tokenizer, input):
+    model.to('cuda')
+    encoded_input = tokenizer(input, padding=True, truncation=True, return_tensors='pt').to(model.device)
     input_ids = encoded_input['input_ids']
     attention_mask = encoded_input['attention_mask']
             
@@ -11,9 +12,13 @@ def batch_inference(model, tokenizer, input, device):
         output.extend(model(input_ids=input_ids[i:i+bs], attention_mask=attention_mask[i:i+bs]).pooler_output.detach())
 
     output = torch.stack(output)
+    model.to('cpu')
     return output
 
-def batch_inference_text(model, tokenizer, input, device):
+def batch_inference_text(model, tokenizer, input):
+    device = 'cuda'
+
+    model = model.to(device)
     bs = 1
     output = []
     for i in range(0, len(input), bs):
@@ -25,4 +30,6 @@ def batch_inference_text(model, tokenizer, input, device):
             max_new_tokens=100,
         )
         output.extend(tokenizer.batch_decode(gen_tokens))
+    
+    model.to('cpu')
     return output

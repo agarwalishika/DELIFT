@@ -100,8 +100,8 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             ds = process_column(ds, 'input')
             ds = process_column(ds, 'output')
 
-            ds['data'] = "Instruction: " + ds['instruction'] + "\nInput: " + ds['input'] + "\nOutput: " + ds['output']
-            return ds.sample(frac=0.03)
+            ds['data'] = "Instruction: " + ds['instruction'].astype(str) + "\nInput: " + ds['input'].astype(str) + "\nOutput: " + ds['output'].astype(str)
+            return ds.sample(n=3000)
 
         subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
         split_keys = dataset_config[key]['split_names'].split("|")
@@ -168,6 +168,17 @@ def parse_qr_datasets():
         full_dataset[new_key] = (train_ds, valid_ds, test_ds)
     return full_dataset
 
+def mt_bench_processing(d):
+    if 'a' in d['winner']:
+        conv_key = 'conversation_a'
+    else:
+        conv_key = 'conversation_b'
+    conversation = ""
+    for i in range(3):
+        conversation += d[conv_key][i]['role'] + ": " + d[conv_key][i]['content'].replace('\n', ' ') + "\n"
+    output = f"assistant: {d[conv_key][3]['content']}".replace('\n', ' ')
+    return "", conversation, output, "Instruction: " + str("") + "\nInput: " + str(conversation) + "\nOutput: " + str(output)
+
 def parse_benchmark_datasets(json_file='visualization/benchmark_datasets.json'):
     """
     Parses HuggingFace benchmark datasets to be usable for subset selection.
@@ -215,14 +226,32 @@ def parse_benchmark_datasets(json_file='visualization/benchmark_datasets.json'):
                 ds = process_column(ds, 'input')
             ds = process_column(ds, 'output')
 
-            ds['data'] = "Instruction: " + str(ds['instruction']) + "\nInput: " + str(ds['input']) + "\nOutput: " + str(ds['output'])
+            ds['data'] = "Instruction: " + ds['instruction'].astype(str) + "\nInput: " + ds['input'].astype(str) + "\nOutput: " + ds['output'].astype(str)
             return ds.sample(frac=1.0)
 
-        subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
-        split_keys = dataset_config[key]['split_names'].split("|")
-        train_ds = get_split_ds(split_keys[0], subset)
-        valid_ds = get_split_ds(split_keys[1], subset)
-        test_ds = get_split_ds(split_keys[2], subset)
+        if 'special_processing' in dataset_config[key]:
+            ds = load_dataset(key, split=dataset_config[key]['split_names'])
+            df = {'instruction': [], 'input': [], 'output': [], 'data': []}
+
+            if 'mt_bench' in key:
+                for d in ds:
+                    instruction, input, output, data = mt_bench_processing(d)
+                    df['instruction'].append(instruction)
+                    df['input'].append(input)
+                    df['output'].append(output)
+                    df['data'].append(data)
+                df = pd.DataFrame.from_dict(df)             
+            
+            x = len(df)
+            train_ds = pd.DataFrame(df[:int(0.7*x)], columns=['data'])
+            valid_ds = pd.DataFrame(df[int(0.7*x):int(0.9*x)], columns=['data'])
+            test_ds = pd.DataFrame(df[int(0.9*x):], columns=['data'])
+        else:
+            subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
+            split_keys = dataset_config[key]['split_names'].split("|")
+            train_ds = get_split_ds(split_keys[0], subset)
+            valid_ds = get_split_ds(split_keys[1], subset)
+            test_ds = get_split_ds(split_keys[2], subset)
 
         # create new key with "benchmark" tag
         new_key = "benchmark_" + key[key.rfind('/')+1:]
@@ -246,7 +275,7 @@ def find_embedding(ds):
         list of vector embeddings
     """
     l = [extract_prompt(d) for d in list(ds)]
-    embedding = mi.batch_inference(model.embedding_model, model.embedding_tokenizer, l, model.device)
+    embedding = mi.batch_inference(model.embedding_model, model.embedding_tokenizer, l)
     return embedding.cpu()
 
 def main(args):

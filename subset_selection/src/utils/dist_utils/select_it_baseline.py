@@ -16,7 +16,7 @@ class SelectIT:
             tokenizer: Tokenizer corresponding to the pre-trained language model.
             device (str): Device to run the model on ('cuda' or 'cpu').
         """
-        self.model = model.to(device)  # Convert the model to the specified device
+        self.model = model  # Convert the model to the specified device
         self.tokenizer = tokenizer
         self.device = device
     
@@ -86,10 +86,11 @@ class SelectIT:
     #     return token_level_score
     
     def sentence_level_self_reflection(self, prompts, references, alpha=0.2, k=5):
+        self.model = self.model.to('cuda')
         rps = self.construction_rps(prompts, references)
         pro = []
         for idx, p in enumerate(rps):
-            tokenized = self.tokenizer(p, padding=True, return_tensors="pt").to(self.device)
+            tokenized = self.tokenizer(p, padding=True, return_tensors="pt").to(self.model.device)
             tokenized.input_ids = tokenized.input_ids.cuda()
             tokenized.attention_mask = tokenized.attention_mask.cuda()
             with torch.no_grad():
@@ -105,6 +106,7 @@ class SelectIT:
                         pro.append(tmp_res)
                 except Exception as ex:
                     print(ex)
+        self.model = self.model.to('cpu')
         pro_softmax = []
         for item in pro:
             tmp_pro_softmax = item

@@ -36,10 +36,10 @@ class InferencePEFT:
             # device_map={"": PartialState().process_index},
         )
 
-        # self.num_gpus = torch.cuda.device_count()
-        # if self.num_gpus > 1:
-        #     print(f"----------using {self.num_gpus}*GPUs----------")
-        #     model = torch.nn.DataParallel(model)
+        self.num_gpus = torch.cuda.device_count()
+        if self.num_gpus > 1:
+            print(f"----------using {self.num_gpus}*GPUs----------")
+            model = torch.nn.DataParallel(model)
         
         # Prepare the model for k-bit training (if needed)
         # model = prepare_model_for_kbit_training(model)
@@ -164,3 +164,5 @@ class InferencePEFT:
             trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
         trainer.save_model()
         print(f'Model {model_dir} has been fine-tuned!')
+        model = None
+        torch.cuda.empty_cache()
