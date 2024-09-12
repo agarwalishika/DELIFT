@@ -169,15 +169,13 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
         score: "bleu" or "rouge" that indicates the performance metric to use
     """
     test_prompts, test_references = get_prompts_refs(test_data)
-    exp_file = fn.exp_knowledge_file(data.dataset_config_code, exp_config, prefix="test-")
+    exp_file = fn.exp_knowledge_file(data.dataset_config_code, exp_config, prefix="")
 
     # check if the inference results (only the generated text) was stored already
     if os.path.exists(exp_file):
         with open(exp_file, 'rb') as f:
             generated_text = pickle.load(f)
-        return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_invidiual=False), generated_text
-    # else:
-    #     return [-1.0], None
+        return calculate_similarity(generated_text, test_references, score=score, return_invidiual=False), generated_text
 
     # if ICL is the subset quality evaluation technique
     if "ICL" in exp_config:
@@ -202,7 +200,8 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
     
     with open(exp_file, 'wb+') as f:
         pickle.dump(generated_text, f)
-    return metrics, generated_text
+    
+    return calculate_similarity(generated_text, test_references, score=score, return_invidiual=False), generated_text
 
 def visualize_subset_experiment(existing_data_name, exist_ind, new_data_name, new_ind, exp_config, utility_criteria, subset_learning, subset_percentage, knowledge_threshold, labels, data: DataObject, plotting: Plotting, models: Models, fn: FolderNames):
     """
@@ -317,7 +316,7 @@ def main():
         # Define the model, datasets and performance thresholds
         col1, col2 = st.columns(2, vertical_alignment="center")
         with col1:
-            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "microsoft/Phi-3-mini-4k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
+            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "Qwen/Qwen2-7B-Instruct") #"microsoft/Phi-3-mini-4k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
 
             col1a, col1b = st.columns(2, vertical_alignment="center")
             with col1a:
@@ -331,8 +330,8 @@ def main():
         labels = [label.split('.')[0] for label in os.listdir(fn.dataset_pkl_folder) if 'all_data' not in label]
 
         with col2:
-            existing_data_name = st.multiselect("Select existing dataset(s)", labels, default=labels[1])[0]
-            new_data_name = st.multiselect("Select dataset(s) to add in", labels, default=labels[1])[0]
+            existing_data_name = st.multiselect("Select existing dataset(s)", labels, default=labels[0])[0]
+            new_data_name = st.multiselect("Select dataset(s) to add in", labels, default=labels[0])[0]
 
         # Set up data variables for the experiments
         with open(fn.visualization_cache_file, 'rb') as f:
@@ -377,41 +376,47 @@ def main():
         # visualize one experiment
         with graph_visualizer:
             col1, col2 = st.columns(2, vertical_alignment="center")
-            with col1:
-                ## define utility
-                utility_criteria = st.selectbox("Define utility using: ", uc_labels[1:])
-            with col2:
-                ## choose subset learning technique
-                subset_learning = st.selectbox("Learn on the subset using:", sl_labels)
+            # with col1:
+            #     ## define utility
+            #     utility_criteria = st.selectbox("Define utility using: ", uc_labels[1:])
+            # with col2:
+            #     ## choose subset learning technique
+            #     subset_learning = st.selectbox("Learn on the subset using:", sl_labels)
 
-            ## check if the experiment has been loaded
-            exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
+            # ## check if the experiment has been loaded
+            # exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
 
-            visualize_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, subset_percentage, threshold, labels, data, plotting, models, fn)
+            # visualize_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, subset_percentage, threshold, labels, data, plotting, models, fn)
         
         # sub-tab to display the tables of results from each experiment configuration
         with results_visualizer:
             rouge_results = {}
             bleu_results = {}
+            bert_results = {}
 
             for utility_criteria in uc_labels:
                 temp_rouge = []
                 temp_bleu = []
+                temp_bert = []
                 for subset_learning in sl_labels:
                     # load experiment configuration
                     exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
-                    _, subset_idx = plotting.visualize_subset(subset_percentage, utility_criteria, data)
-                    data.create_train_subset(subset_idx)
+                    # _, subset_idx = plotting.visualize_subset(subset_percentage, utility_criteria, data)
+                    # data.create_train_subset(subset_idx)
 
                     # calculate rouge on test set
-                    r_val, _ = calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
+                    r_val, _ = calculate_test_performance(all_data[new_data_ind][1], data, exp_config, models, fn, score="rouge")
                     temp_rouge.append(round(100 * r_val[0], 2))
 
                     # calculate bleu on test set
-                    b_val, _ = calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="bleu")
+                    b_val, _ = calculate_test_performance(all_data[new_data_ind][1], data, exp_config, models, fn, score="bleu")
                     temp_bleu.append(round(100 * b_val[0], 2))
+
+                    b_score, _ = calculate_test_performance(all_data[new_data_ind][1], data, exp_config, models, fn, score="bertscore")
+                    temp_bert.append(round(100 * b_score[0], 2))
                 rouge_results[utility_criteria] = temp_rouge
                 bleu_results[utility_criteria] = temp_bleu
+                bert_results[utility_criteria] = temp_bert
             
             st.write('Test set ROUGE:')
             df_r = pd.DataFrame.from_dict(rouge_results)
@@ -425,11 +430,17 @@ def main():
             df.index = sl_labels
             st.table(df)
 
+            st.write('Test set BERTScore:')
+            df = pd.DataFrame.from_dict(bert_results)
+            df.columns = uc_labels
+            df.index = sl_labels
+            st.table(df)
+
 
     # tab to display the conditional gain and mutual information between the two datasets
     with tab2:
         ## Conditional Gain / MI
-        uc_labels = ["Model Dependent Utility", "Model Independent Semantic Similarity"]
+        uc_labels = ["Model Independent Semantic Similarity", "Model Dependent Utility"]
         uc_col, perc_col = st.columns(2)
         with uc_col:
             utility_criteria = st.selectbox("Select utility criteria: ", uc_labels)

@@ -301,6 +301,8 @@ class Plotting():
             fl_subset = FLSubsetCreation()
             if data.use_case == DataObjectConstants.DATA_OBJECT_BENCHMARK:
                 subset = fl_subset.create_mutual_information_subset(data_sijs=data_sijs, query_sijs=private_sijs, k=k)
+            elif data.use_case == DataObjectConstants.DATA_OBJECT_SAME_DATSET:
+                subset = fl_subset.create_subset(data_sijs=data_sijs, k=k)
             else:
                 subset = fl_subset.create_conditional_gain_subset(data_sijs=data_sijs, private_sijs=private_sijs, k=k)
         elif "Random" in utility_criteria:

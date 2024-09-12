@@ -29,7 +29,7 @@ class InferencePEFT:
             #load_in_4bit=True,
             #device_map="auto",
             trust_remote_code=True,
-            # attn_implementation="flash_attention_2",
+            attn_implementation="flash_attention_2",
             torch_dtype=quant_storage_dtype,
             use_cache=False,
             device_map='auto'
@@ -115,10 +115,11 @@ class InferencePEFT:
             per_device_train_batch_size=1,
             per_device_eval_batch_size=1,
             gradient_accumulation_steps=1,
-            evaluation_strategy="epoch",
+            eval_accumulation_steps=1,
+            evaluation_strategy="no",
             eval_steps=10,
             save_strategy="epoch",
-            save_steps=10,
+            save_steps=500,
             learning_rate=2.5e-5,
             bf16=True,
             # tf32=True,
@@ -138,7 +139,7 @@ class InferencePEFT:
             peft_config=peft_config,
             max_seq_length=max_seq_length,
             tokenizer=tokenizer,
-            compute_metrics=compute_metrics,
+            # compute_metrics=compute_metrics,
             args=training_arguments,
             packing=True,
             eval_packing=False,
@@ -155,7 +156,12 @@ class InferencePEFT:
         ##########################
         # Train model
         ##########################
-        trainer.train()
+        try:
+            trainer.train()
+        except Exception as e:
+            import shutil
+            shutil.rmtree(model_dir)
+            0/0
 
         ##########################
         # SAVE MODEL FOR SAGEMAKER
@@ -164,5 +170,6 @@ class InferencePEFT:
             trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
         trainer.save_model()
         print(f'Model {model_dir} has been fine-tuned!')
-        model = None
+        
+        del model
         torch.cuda.empty_cache()

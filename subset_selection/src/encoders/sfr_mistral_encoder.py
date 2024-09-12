@@ -22,7 +22,7 @@ class SFRMistralEncoder(BaseEncoder):
         # load model and tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModel.from_pretrained(model_name)
-        model = model.to(device)
+        model.to(device)
         return tokenizer, model
 
     @staticmethod

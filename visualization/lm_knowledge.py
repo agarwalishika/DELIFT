@@ -5,6 +5,7 @@ import torch
 
 rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
+bert_metric = evaluate.load('bertscore')
 
 def calculate_similarity(predictions, references, score="rouge", return_invidiual=True):
     """
@@ -25,8 +26,19 @@ def calculate_similarity(predictions, references, score="rouge", return_invidiua
         predictions = [[p] for p in predictions]
         references = [[r] for r in references]
     
-    sim_metric = rouge_metric if score == "rouge" else bleu_metric
-    metric_key = "rouge1" if score == "rouge" else "bleu"
+
+    if score == "rouge":
+        sim_metric = rouge_metric
+        metric_key = "rouge1"
+    elif score == "bleu":
+        sim_metric = bleu_metric
+        metric_key = "bleu"
+    else:
+        sim_metric = bert_metric
+        metric_key = "f1"
+    
+    # sim_metric = rouge_metric if score == "rouge" elif score == "bleu" bleu_metric else bert_metric
+    # metric_key = "rouge1" if score == "rouge" else "bleu"
     metrics = []
     for p, r in zip(predictions, references):
         metrics.append(sim_metric.compute(predictions=p, references=r)[metric_key])
@@ -46,9 +58,10 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=4):
         metrics: np array of ROUGE-1 metrics of size 1x|prompts|
         generated_text: array of size 1x|prompts| of generated responses from the given LM
     """
-    max_length = min(tokenizer.model_max_length, 2048) - 100
+    max_length = min(tokenizer.model_max_length, 2048) - 150
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to('cuda')
+    # model.to('cuda')
+    model.eval()
 
     all_metrics = []
     all_gen_texts = []
@@ -60,7 +73,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=4):
 
         # Modify prompts in place
         for j, prompt in enumerate(batch_prompts):
-            batch_prompts[j] = prompt + "\n### Response:\n"
+            batch_prompts[j] = prompt + "\n### Output:\n"
 
         tokenized_output = tokenizer(
             list(batch_prompts), 
@@ -73,7 +86,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=4):
         with torch.no_grad():
             gen_tokens = model.generate(
                 **tokenized_output,
-                max_new_tokens=100,
+                max_new_tokens=150,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.eos_token_id,
                 do_sample=True,
@@ -94,7 +107,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=4):
         all_metrics.extend(batch_metrics)
         all_gen_texts.extend(batch_gen_texts)
 
-    model.to('cpu')
+    # model.to('cpu')
     return np.array(all_metrics), all_gen_texts
 
 

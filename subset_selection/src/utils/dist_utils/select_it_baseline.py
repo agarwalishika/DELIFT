@@ -86,7 +86,7 @@ class SelectIT:
     #     return token_level_score
     
     def sentence_level_self_reflection(self, prompts, references, alpha=0.2, k=5):
-        self.model = self.model.to('cuda')
+        self.model.to('cuda')
         rps = self.construction_rps(prompts, references)
         pro = []
         for idx, p in enumerate(rps):
@@ -106,7 +106,7 @@ class SelectIT:
                         pro.append(tmp_res)
                 except Exception as ex:
                     print(ex)
-        self.model = self.model.to('cpu')
+        self.model.to('cpu')
         pro_softmax = []
         for item in pro:
             tmp_pro_softmax = item

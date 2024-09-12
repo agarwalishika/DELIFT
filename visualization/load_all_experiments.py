@@ -10,10 +10,17 @@ import pickle
 import torch
 import os
 
+import wandb
+wandb.login('fa20f5af73ec4d1dedb50a817a8de53fbef1bade')
+
 def main(model_names, existing_data_name, new_data_name, threshold, subset_percentage):
+    run = wandb.init(
+        project="Optimizing Data Selection",
+    )
+
     # all experimental configurations
-    uc_labels = ["SelectIT", "Model Dependent + CG FL", "Model Independent + CG FL", "Random", "Full Dataset"]
-    ucl_shorthand = ["select_it", "mod_dep_fl", "mod_ind_fl", "random", "full_data"] 
+    uc_labels = ["Model Dependent + CG FL", "SelectIT", "Model Independent + CG FL", "Random", "Full Dataset"]
+    ucl_shorthand = ["mod_dep_fl", "select_it", "mod_ind_fl", "random", "full_data"] 
     # uc_labels = ["Model Dependent ICL Utility", "Model Dependent Gradient Utility", "Model Independent", "Random", "Full Dataset"]
     # ucl_shorthand = ["mod_dep_icl", "mod_dep_grad", "mod_ind", "random", "full_data"]
     sl_labels = ["ICL", "PEFT"]
@@ -83,18 +90,19 @@ def main(model_names, existing_data_name, new_data_name, threshold, subset_perce
                     print('NEW EXPERIMENT\n', exp_config, utility_criteria, '\n\n\n\n')
                     load_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, 
                                         subset_percentage, threshold, labels, data, plotting, models, fn)
-                    calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
+                    rouge_val, _ = calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="rouge")
+                    bleu_val, _ = calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="bleu")
+                    bert_val, _ = calculate_test_performance(all_data[new_data_ind][2], data, exp_config, models, fn, score="bertscore")
+
+                    my_table = wandb.Table(columns=['ROUGE', 'BLEU', 'BERTScore'])
+                    my_table.add_data(rouge_val[0], bleu_val[0], bert_val[0])
+                    run.log({f"{data.use_case} - {model_name}, {exp_config}": my_table})
                 except Exception as e:
                     with open('failures.txt', 'a+') as f:
                         f.write(f'{exp_config} on {existing_data_name} and {new_data_name}')
                         f.write('\n\n')
                         f.write(str(traceback.format_exc()))
                         f.write('\n---------------------------------------------------------------------\n')
-                
-                # device = cuda.get_current_device()
-                # device.reset()
-                # cuda.close()
-                # torch.cuda.is_available()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -63,7 +63,8 @@ class ModelDependentICLUtility:
             distance = torch.norm(pred_probs - 1.0) / torch.sqrt(num_valid_tokens)
             distances.append(distance)
 
-        input_ids.to('cpu'), attention_mask.to('cpu')
+        del input_ids
+        del attention_mask
         return distances
 
     def prepare_batch_inputs(self, prompts, responses, example_prompts, example_responses, 
@@ -228,7 +229,7 @@ class ModelDependentICLUtility:
         n_valid = len(valid_prompts)
         utility_kernel = np.zeros((n_valid, n_train))
 
-        self.model = self.model.to('cuda')
+        # self.model.to('cuda')
 
         # Compute distances without ICL examples
         distances_without_icl = [0] * n_valid
@@ -260,6 +261,6 @@ class ModelDependentICLUtility:
             max_val = utility_kernel.max()
             utility_kernel = (utility_kernel - min_val) / (max_val - min_val)
         
-        self.model = self.model.to('cpu')
+        # self.model.to('cpu')
         
         return utility_kernel

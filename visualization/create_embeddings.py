@@ -101,7 +101,7 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             ds = process_column(ds, 'output')
 
             ds['data'] = "Instruction: " + ds['instruction'].astype(str) + "\nInput: " + ds['input'].astype(str) + "\nOutput: " + ds['output'].astype(str)
-            return ds.sample(n=3000)
+            return ds.sample(n=30)
 
         subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
         split_keys = dataset_config[key]['split_names'].split("|")
@@ -119,6 +119,66 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
         new_key = key[key.rfind('/')+1:]
         full_dataset[new_key] = (train_ds, valid_ds, test_ds)
     
+    return full_dataset
+
+def parse_qa_datasets():
+    """
+    Parses Question Answering datasets (SQuAD and HotpotQA) to be usable for subset selection.
+
+    Args:
+        None, file paths are assumed to be saved in a FolderNames instance (folder_names.py).
+    Returns:
+        A dictionary of datasets where:
+        - the key is the name of the dataset
+        - the value is a tuple of the train, valid, and test splits of the dataset.
+
+        Each split is a Pandas DataFrame with columns: instruction, input, output, and data (which is a combination of the first 3 columns)
+    """
+    full_dataset = {}
+
+    ds = load_dataset('hotpotqa/hotpot_qa', 'fullwiki')
+    data = []
+    for dset in [ds['train'], ds['validation'], ds['test']]:
+        for i in dset:
+            instruction = i['question']
+            output = i['answer']
+
+            input = ""
+            temp = i['supporting_facts']
+            for x in range(len(temp['title'])):
+                ind = i['context']['title'].index(temp['title'][x])
+                input += i['context']['sentences'][ind][temp['sent_id'][x]] + " "
+
+            data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
+
+            if len(data) > 10:
+                break
+        break
+
+    train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
+    valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
+    test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
+    full_dataset['hotpot_qa'] = (train_ds, valid_ds, test_ds)
+
+    data = []
+    ds = load_dataset("rajpurkar/squad")
+    for dset in [ds['train'], ds['validation']]:
+        for i in dset:
+            instruction = i['question']
+            input = i['context'][i['answers']['answer_start'][0]:]
+            output = i['answers']['text'][0]
+
+            data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
+        
+            if len(data) > 10:
+                break
+        break
+    
+    train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
+    valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
+    test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
+    full_dataset['squad'] = (train_ds, valid_ds, test_ds)
+
     return full_dataset
 
 def parse_qr_datasets():
@@ -296,8 +356,12 @@ def main(args):
         datasets = parse_benchmark_datasets()
         hf_dataset = parse_hf_datasets()
         datasets.update(hf_dataset)
+        qa_dataset = parse_qa_datasets()
+        datasets.update(qa_dataset)
     elif args.use_case == 3:
         datasets = parse_qr_datasets()
+        qa_datasets = parse_qa_datasets()
+        datasets.update(qa_datasets)
     
     print('finding embeddings')
     for key in tqdm(datasets.keys()):

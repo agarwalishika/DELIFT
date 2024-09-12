@@ -1,6 +1,6 @@
 import sys
 sys.path.append('.')
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
 from sentence_transformers import SentenceTransformer
 import torch
 
@@ -25,7 +25,28 @@ class Models:
 
 
         # define language models for inference
-        self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name).to('cpu')
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_quant_storage=torch.bfloat16,
+        )
+
+        self.language_model = AutoModelForCausalLM.from_pretrained(
+            language_model_name, 
+            quantization_config=bnb_config,
+            #load_in_4bit=True,
+            #device_map="auto",
+            trust_remote_code=True,
+            attn_implementation="flash_attention_2",
+            torch_dtype=torch.bfloat16,
+            use_cache=False,
+            # device_map='auto'
+            # device_map={"": PartialState().process_index},
+        )
+
+        # self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name)#, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2").to('cpu')
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs!")
             self.language_model = torch.nn.DataParallel(self.language_model)
