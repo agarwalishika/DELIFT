@@ -28,7 +28,7 @@ do
     python3 visualization/load_all_experiments.py --existing_data_name hotpot_qa --new_data_name benchmark_mmlu --model_name=$MODEL_NAME
     python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mt_bench_human_judgments --model_name=$MODEL_NAME
 
-    MODEL_NAME='Qwen/Qwen2-7B-Instruct'
+    MODEL_NAME='Qwen/Qwen2-72B-Instruct'
     python3 visualization/load_all_experiments.py --existing_data_name hotpot_qa --new_data_name benchmark_mmlu --model_name=$MODEL_NAME
     python3 visualization/load_all_experiments.py --existing_data_name mix-instruct --new_data_name benchmark_mt_bench_human_judgments --model_name=$MODEL_NAME
 
