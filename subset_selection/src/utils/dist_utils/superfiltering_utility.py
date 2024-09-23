@@ -17,9 +17,9 @@ class SuperfilteringUtility:
         self.tokenizer = tokenizer
         self.device = device
 
-    def compute_model_prediction_probability_distances(self, input_ids, attention_mask, token_type_ids):
+    def compute_length_normalized_log_probabilities(self, input_ids, attention_mask, token_type_ids):
         """
-        Compute the prediction probability distances for model outputs.
+        Compute the length-normalized cumulative log probability of the response tokens.
 
         Args:
             input_ids (torch.Tensor): Tensor of input IDs.
@@ -27,61 +27,51 @@ class SuperfilteringUtility:
             token_type_ids (torch.Tensor): Tensor of token type IDs.
 
         Returns:
-            distances (list): List of distances for each input example.
+            log_probs (list): List of length-normalized cumulative log probabilities for each input example.
         """
-        input_ids = input_ids.to(self.model.device)
-        attention_mask = attention_mask.to(self.model.device)
-        with torch.no_grad():  # Disable gradient calculation for inference
+        input_ids = input_ids.to(self.device)
+        attention_mask = attention_mask.to(self.device)
+        with torch.no_grad():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-        logits_all = outputs.logits  # Get the logits from the model outputs
-        distances = []
+        logits_all = outputs.logits
+        log_probs = []
 
         for logits, input_id, token_type_id in zip(logits_all, input_ids, token_type_ids):
-            x = torch.nn.functional.softmax(logits, dim=-1)
+            # Shift logits and input_ids to align with next token prediction
+            shifted_logits = logits[:-1, :]
+            shifted_input_ids = input_id[1:]
+            shifted_token_type_ids = token_type_id[1:]
 
-            if len(x.shape) > 2:
-                x = x.squeeze()
-            
-            distances.append(x.max(axis=1).values.prod().pow(1/x.shape[0]).item())
+            # Identify positions where token_type_ids == 1 (response tokens)
+            valid_positions = (shifted_token_type_ids == 1)
 
-            """
-            x.max(axis=1).values.sum().pow(1/x.shape[0])
-            x -> N probability distributions across V where N is the number of generated tokens, and V is the vocabulary size
-            x.max(axis=1).values -> gets the probabilities of the maximum likely token, is a 1xN size tensor
-            x.max(axis=1).values.prod() -> multiply the probabilities
-            x.max(axis=1).values.prod().pow(1/x.shape[0]) -> probability to the power of (1/N)
-            """
+            if valid_positions.sum() == 0:
+                # If no valid positions, skip this example
+                log_probs.append(torch.tensor(0.0, device=self.device))
+                continue
 
-            # # Shift logits and input_ids to align with next token prediction
-            # shifted_logits = logits[:-1, :]
-            # shifted_input_ids = input_id[1:]
-            # shifted_token_type_ids = token_type_id[1:]
+            # Number of response tokens
+            num_response_tokens = valid_positions.sum().item()
 
-            # # Identify positions where token_type_ids == 1
-            # valid_positions = (shifted_token_type_ids == 1)
+            # Filter logits and labels by valid positions
+            valid_logits = shifted_logits[valid_positions]
+            valid_labels = shifted_input_ids[valid_positions]
 
-            # if valid_positions.sum() == 0:
-            #     # If no valid positions, skip this example
-            #     distances.append(torch.tensor(0.0, device=logits.device))
-            #     continue
+            # Compute log probabilities for the valid tokens
+            log_probs_tokens = F.log_softmax(valid_logits, dim=-1)
+            token_log_probs = log_probs_tokens.gather(-1, valid_labels.unsqueeze(-1)).squeeze(-1)
 
-            # # Filter logits and labels by valid positions
-            # valid_logits = shifted_logits[valid_positions]
-            # valid_labels = shifted_input_ids[valid_positions]
+            # Sum log probabilities to get the cumulative log probability
+            total_log_prob = token_log_probs.sum()
 
-            # # Compute probabilities for the valid tokens
-            # probs = F.softmax(valid_logits, dim=-1)  # Apply softmax to get probabilities
-            # pred_probs = probs.gather(-1, valid_labels.unsqueeze(-1)).squeeze(-1)  # Get probabilities of ground truth tokens
-            
-            # # Compute Euclidean distance with length normalization
-            # num_valid_tokens = valid_positions.sum().float()
-            # distance = torch.norm(pred_probs - 1.0) / torch.sqrt(num_valid_tokens)
-            # distances.append(distance)
+            # Length normalization: divide by the number of response tokens
+            length_normalized_log_prob = total_log_prob / num_response_tokens
 
+            log_probs.append(length_normalized_log_prob)
 
         del input_ids
         del attention_mask
-        return distances
+        return log_probs
 
     def prepare_batch_inputs(self, prompts, responses, example_prompts, example_responses, 
                             instruction_no_icl="Please generate a response to the following query.", 
