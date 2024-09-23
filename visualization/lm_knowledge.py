@@ -3,7 +3,7 @@ import numpy as np
 import evaluate
 import torch
 import similarity
-
+import pickle
 rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
 bert_metric = evaluate.load('bertscore')
@@ -28,7 +28,7 @@ def calculate_similarity(predictions, references, score="rouge", return_invidiua
         raise ValueError(f"Invalid similarity metric: {score}")
     
 
-def perform_inference(model, tokenizer, prompts, references, batch_size=2):
+def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_path=None):
     """
     Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
 
@@ -50,8 +50,8 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2):
     all_gen_texts = []
 
     # Process prompts in batches
-    max_len = max(len(prompts), 200)
-    for i in tqdm(range(0, max_len, batch_size)):
+    max_len = min(len(prompts), 200)
+    for i in tqdm(range(0, max_len, batch_size), total=max_len):
         batch_prompts = prompts[i:i+batch_size]
         batch_references = references[i:i+batch_size]
 
@@ -90,6 +90,10 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2):
 
         all_metrics.extend(batch_metrics)
         all_gen_texts.extend(batch_gen_texts)
+
+        if save_path:
+            with open(save_path, "wb+") as f:
+                    pickle.dump(all_gen_texts, f)
 
     # model.to('cpu')
     return np.array(all_metrics), all_gen_texts
