@@ -156,6 +156,11 @@ def get_label_names_from_fig(fig):
         label_names.append(data.name)
     return label_names
 
+def cut(temp):
+    if "  " in temp:
+        return temp[:temp.find("  ")]
+    return temp
+
 def calculate_test_performance(test_data, data: DataObject, exp_config, models: Models, fn: FolderNames, score):
     """
     Performs inference on the test set and returns an overall performance.
@@ -169,19 +174,22 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
         score: "bleu" or "rouge" that indicates the performance metric to use
     """
     test_prompts, test_references = get_prompts_refs(test_data)
-    exp_file = fn.exp_knowledge_file(data.dataset_config_code, exp_config, prefix="")
-
+    exp_file = fn.exp_knowledge_file(data.dataset_config_code, exp_config, prefix="")#.replace('generated_text', '200generated_text')
+    
     # check if the inference results (only the generated text) was stored already
     if os.path.exists(exp_file):
         with open(exp_file, 'rb') as f:
             generated_text = pickle.load(f)
-        return calculate_similarity(generated_text, test_references, score=score, return_invidiual=False), generated_text
+        generated_text = [cut(temp) for temp in generated_text]
+        return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_invidiual=False), generated_text
+    else:
+        return [-100.0], None
 
     # if ICL is the subset quality evaluation technique
     if "ICL" in exp_config:
         # create the ICL example-augmented prompts if they aren't already stored
         icl = InferenceICL(models.embedding_model, models.embedding_tokenizer)
-        icl_io_file = fn.icl_io_file(data.dataset_config_code, exp_config, prefix="test-")
+        icl_io_file = fn.icl_io_file(data.dataset_config_code, exp_config, prefix="")
         if not os.path.exists(icl_io_file):
             icl_prompts, icl_references = icl.create_icl_inference_data(data.train_new_data_sub, test_prompts, test_references)
             with open(icl_io_file, 'wb+') as f:
@@ -316,7 +324,7 @@ def main():
         # Define the model, datasets and performance thresholds
         col1, col2 = st.columns(2, vertical_alignment="center")
         with col1:
-            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "Qwen/Qwen2-7B-Instruct") #"microsoft/Phi-3-mini-4k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
+            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "Qwen/Qwen2-72B-Instruct") #"Qwen/Qwen2-72B-Instruct") #"microsoft/Phi-3-mini-128k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
 
             col1a, col1b = st.columns(2, vertical_alignment="center")
             with col1a:
@@ -330,8 +338,8 @@ def main():
         labels = [label.split('.')[0] for label in os.listdir(fn.dataset_pkl_folder) if 'all_data' not in label]
 
         with col2:
-            existing_data_name = st.multiselect("Select existing dataset(s)", labels, default=labels[0])[0]
-            new_data_name = st.multiselect("Select dataset(s) to add in", labels, default=labels[0])[0]
+            existing_data_name = 'mix-instruct' #st.multiselect("Select existing dataset(s)", labels, default=labels[0])[0]
+            new_data_name = 'mix-instruct' #st.multiselect("Select dataset(s) to add in", labels, default=labels[0])[0]
 
         # Set up data variables for the experiments
         with open(fn.visualization_cache_file, 'rb') as f:

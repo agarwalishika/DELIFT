@@ -13,6 +13,7 @@ import os
 sys.path.append('.')
 from subset_selection.src.utils.dist_utils.get_similarity_kernel_torch import ModelIndependentICLUtility
 from subset_selection.src.utils.dist_utils.get_icl_utility_kernel import ModelDependentICLUtility
+from subset_selection.src.utils.dist_utils.superfiltering_utility import SuperfilteringUtility
 from subset_selection.src.utils.dist_utils.select_it_baseline import SelectIT
 from subset_selection.subset_random import RandomSubsetCreation
 from subset_selection.inference_peft import InferencePEFT
@@ -232,6 +233,13 @@ class Plotting():
         """
         if "initial" in utility_criteria.lower():
             return None, []
+        if "less" in utility_criteria.lower():
+            model_name = "Phi" if "Phi" in self.models.model_name else "Qwen"
+            dataset_name = data.dataset_config_code.replace("|", "-")
+            subset_file = self.fn.less_subset_file(model_name, dataset_name)
+            with open(subset_file, 'rb') as f:
+                subset_idx = pickle.load(f)
+            return None, subset_idx[0]
         
         if "SelectIT" in utility_criteria:
             subset_file = self.fn.select_it_subset_file(data.dataset_config_code)
@@ -261,18 +269,17 @@ class Plotting():
             with open(utility_file, 'rb') as f:
                 data_sijs, private_sijs = pickle.load(f)
         
-        # calculate model dependent gradient utility
-        # elif "Gradient" in utility_criteria:
-        #     utility_file = self.fn.model_dep_grad_utility_file(data.dataset_config_code)
-        #     if not os.path.exists(utility_file):
-        #         print(utility_criteria, ': Calculating model dependent gradient utility...')
-        #         model_dep = ModelDependentGradientUtility(self.models.language_model, self.models.language_tokenizer)
-        #         data_sijs = model_dep.calculate_icl_utility(train_prompts=data.train_new_prompts, train_responses=data.train_new_references)
-        #         private_sijs = model_dep.calculate_icl_utility(train_prompts=data.train_existing_prompts, train_responses=data.train_existing_references, valid_prompts=data.train_new_prompts, valid_responses=data.train_new_references,)
-        #         with open(utility_file, 'wb+') as f:
-        #             pickle.dump((data_sijs, private_sijs), f)
-        #     with open(utility_file, 'rb') as f:
-        #         data_sijs, private_sijs = pickle.load(f)
+        if "Superfiltering" in utility_criteria:
+            utility_file = self.fn.superfiltering_utility_file(data.dataset_config_code) # self.fn.model_dep_icl_utility_file(data.dataset_config_code)
+            if not os.path.exists(utility_file):
+                print(utility_criteria, ': Calculating fuperfiltering utility...')
+                superfiltering = SuperfilteringUtility(self.models.language_model, self.models.language_tokenizer)
+                data_sijs = superfiltering.calculate_icl_utility(train_prompts=data.train_new_prompts, train_responses=data.train_new_references)
+                private_sijs = superfiltering.calculate_icl_utility(train_prompts=data.train_existing_prompts, train_responses=data.train_existing_references, valid_prompts=data.train_new_prompts, valid_responses=data.train_new_references,)
+                with open(utility_file, 'wb+') as f:
+                    pickle.dump((data_sijs, private_sijs), f)
+            with open(utility_file, 'rb') as f:
+                data_sijs, private_sijs = pickle.load(f)
 
         # calculate model independent semantic similarity utility
         elif "Model Independent" in utility_criteria:

@@ -145,16 +145,22 @@ def parse_qa_datasets():
 
             input = ""
             temp = i['supporting_facts']
+            keep = True
             for x in range(len(temp['title'])):
                 ind = i['context']['title'].index(temp['title'][x])
-                input += i['context']['sentences'][ind][temp['sent_id'][x]] + " "
+                try:
+                    input += i['context']['sentences'][ind][temp['sent_id'][x]] + " "
+                except:
+                   keep = False
 
-            data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
+            if keep:
+                data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
 
-            if len(data) > 10:
+            if len(data) > 1000:
                 break
         break
 
+    x = len(data)
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
@@ -170,10 +176,11 @@ def parse_qa_datasets():
 
             data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
         
-            if len(data) > 10:
+            if len(data) > 1000:
                 break
         break
     
+    x = len(data)
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])

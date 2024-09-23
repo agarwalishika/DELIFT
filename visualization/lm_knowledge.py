@@ -2,6 +2,7 @@ from tqdm import tqdm
 import numpy as np
 import evaluate
 import torch
+import similarity
 
 rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
@@ -14,38 +15,20 @@ def calculate_similarity(predictions, references, score="rouge", return_invidiua
     Args:
         predictions: list of strings for the hypothesis
         references: list of strings for the reference
-        score: either "rouge" or "bleu" to calculate either metric
+        score: one of "rouge", "bleu", "bertscore", "bge", "promedeus"
         return_invidiual: if True, it will return the individual scores for corresponding prediction-reference pairs
     Returns:
         np array of metrics of size 1x1 if return_individual is True, else 1x|predictions|
     """
-    if not return_invidiual:
-        predictions = [predictions]
-        references = [references]
+    if "rouge" in score or "bleu" in score or "bertscore" in score:
+        return similarity.calculate_evaluate_metric(predictions, references, score, return_invidiual)
+    elif "bge" in score:
+        return similarity.calculate_bge(predictions, references, return_invidiual)
     else:
-        predictions = [[p] for p in predictions]
-        references = [[r] for r in references]
+        raise ValueError(f"Invalid similarity metric: {score}")
     
 
-    if score == "rouge":
-        sim_metric = rouge_metric
-        metric_key = "rouge1"
-    elif score == "bleu":
-        sim_metric = bleu_metric
-        metric_key = "bleu"
-    else:
-        sim_metric = bert_metric
-        metric_key = "f1"
-    
-    # sim_metric = rouge_metric if score == "rouge" elif score == "bleu" bleu_metric else bert_metric
-    # metric_key = "rouge1" if score == "rouge" else "bleu"
-    metrics = []
-    for p, r in zip(predictions, references):
-        metrics.append(sim_metric.compute(predictions=p, references=r)[metric_key])
-    return np.array(metrics)
-    
-
-def perform_inference(model, tokenizer, prompts, references, batch_size=4):
+def perform_inference(model, tokenizer, prompts, references, batch_size=2):
     """
     Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
 
@@ -67,7 +50,8 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=4):
     all_gen_texts = []
 
     # Process prompts in batches
-    for i in tqdm(range(0, len(prompts), batch_size)):
+    max_len = max(len(prompts), 200)
+    for i in tqdm(range(0, max_len, batch_size)):
         batch_prompts = prompts[i:i+batch_size]
         batch_references = references[i:i+batch_size]
 

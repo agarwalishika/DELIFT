@@ -86,7 +86,7 @@ class SelectIT:
     #     return token_level_score
     
     def sentence_level_self_reflection(self, prompts, references, alpha=0.2, k=5):
-        self.model.to('cuda')
+        # self.model.to('cuda')
         rps = self.construction_rps(prompts, references)
         pro = []
         for idx, p in enumerate(rps):
@@ -99,14 +99,21 @@ class SelectIT:
                     predictions = outputs[0]
                     logits = predictions[:, -1, :]
                     softmax_logits = torch.softmax(logits.float(), dim=-1)
-                    for index in range(1):
-                        tmp_res = [float(softmax_logits[index][29896]), float(softmax_logits[index][29906]),
-                                float(softmax_logits[index][29941]), float(softmax_logits[index][29946]),
-                                float(softmax_logits[index][29945])]
-                        pro.append(tmp_res)
+                    if "Phi" in str(type(self.model)):
+                        for index in range(1):
+                            tmp_res = [float(softmax_logits[index][29896]), float(softmax_logits[index][29906]),
+                                    float(softmax_logits[index][29941]), float(softmax_logits[index][29946]),
+                                    float(softmax_logits[index][29945])]
+                            pro.append(tmp_res)
+                    elif "Qwen" in str(type(self.model)):
+                        for index in range(1):
+                            tmp_res = [float(softmax_logits[index][16]), float(softmax_logits[index][17]),
+                                    float(softmax_logits[index][18]), float(softmax_logits[index][19]),
+                                    float(softmax_logits[index][20])]
+                            pro.append(tmp_res)
                 except Exception as ex:
                     print(ex)
-        self.model.to('cpu')
+        # self.model.to('cpu')
         pro_softmax = []
         for item in pro:
             tmp_pro_softmax = item

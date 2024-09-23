@@ -5,6 +5,8 @@ def parse_file_name(dataset_name, exp_config):
     if "before" in exp_config:
         k = re.findall(".*-.*-(.*-.*)", exp_config)[0]
         return f"before_exp-{k}_{dataset_name}"
+    elif "initial" in exp_config:
+        return f"{exp_config.replace('initial', 'before_exp')}_{dataset_name}"
     return f"{exp_config}_{dataset_name}"
 
 class FolderNames:
@@ -41,11 +43,13 @@ class FolderNames:
         self.subset_folder = os.path.join(self.main_folder, "utility")
         self.select_it_subset_file = lambda dataset_name: os.path.join(self.subset_folder, f"select_it_subset_{dataset_name}.pkl")
         self.model_dep_utility_file = lambda dataset_name: os.path.join(self.subset_folder, f"model_dep_utility_{dataset_name}.pkl")
+        self.superfiltering_utility_file = lambda dataset_name: os.path.join(self.subset_folder, f"superfiltering_utility_{dataset_name}.pkl")
         self.model_ind_utility_file = lambda dataset_name: os.path.join(self.subset_folder, f"model_ind_utility_{dataset_name}.pkl")
         if not os.path.exists(self.subset_folder): os.mkdir(self.subset_folder)
 
         # store the knowledge after the experiments
-        self.exp_knowledge_file = lambda dataset_name, exp_config, prefix="": os.path.join(self.main_folder, "generated_text", f"{prefix}{parse_file_name(dataset_name, exp_config)}.pkl")
+        self.exp_prefix = ""
+        self.exp_knowledge_file = lambda dataset_name, exp_config, prefix="": os.path.join(self.main_folder, f"{self.exp_prefix}generated_text", f"{prefix}{parse_file_name(dataset_name, exp_config)}.pkl")
         if not os.path.exists(os.path.join(self.main_folder, "generated_text")): os.mkdir(os.path.join(self.main_folder, "generated_text"))
 
         # store individual similarity metrics
@@ -59,3 +63,6 @@ class FolderNames:
         # peft specific
         self.peft_ft_model = lambda dataset_name, exp_config: os.path.join(self.main_folder, "peft_ft_models", parse_file_name(dataset_name, exp_config))
         if not os.path.exists(os.path.join(self.main_folder, "peft_ft_models")): os.mkdir(os.path.join(self.main_folder, "peft_ft_models"))
+
+        # less specific
+        self.less_subset_file = lambda model, dataset_name: f"/u/ishikaa2/selected_data/{model}-{dataset_name}_indicies.pkl"

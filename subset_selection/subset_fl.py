@@ -14,9 +14,8 @@ class FLSubsetCreation():
         n, _ = data_sijs.shape
 
         # use facility location to find subset
-        fl = sb.functions.facilityLocation.FacilityLocationFunction(n, mode='dense', sijs=data_sijs)
-        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=True, verbose=True)
-        
+        fl = sb.functions.facilityLocation.FacilityLocationFunction(n, mode='dense', sijs=data_sijs, separate_rep=False)
+        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=False, verbose=True)
         return subset
     
     def create_conditional_gain_subset(self, data_sijs, private_sijs, k=0.3):
@@ -28,8 +27,7 @@ class FLSubsetCreation():
 
         # use facility location to find subset
         fl = sb.functions.facilityLocationConditionalGain.FacilityLocationConditionalGainFunction(n, num_privates, data_sijs=data_sijs, private_sijs=private_sijs)
-        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=True, verbose=True)
-        
+        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=False, verbose=True)
         return subset
 
     def create_mutual_information_subset(self, data_sijs, query_sijs, k=0.3):
@@ -41,8 +39,7 @@ class FLSubsetCreation():
 
         # use facility location to find subset
         fl = sb.functions.facilityLocationMutualInformation.FacilityLocationMutualInformationFunction(n, num_privates, data_sijs=data_sijs, query_sijs=query_sijs)
-        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=True, verbose=True)
-        
+        subset = fl.maximize(budget=int(k * n), optimizer='LazyGreedy', stopIfZeroGain=False, stopIfNegativeGain=False, verbose=True)
         return subset
 
 
