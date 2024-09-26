@@ -19,8 +19,8 @@ def main(model_names, existing_data_name, new_data_name, threshold, subset_perce
     )
 
     # all experimental configurations
-    uc_labels = ["Model Dependent + CG FL", "SelectIT", "Model Independent + CG FL", "Random", "Full Dataset"]
-    ucl_shorthand = ["mod_dep_fl", "select_it", "mod_ind_fl", "random", "full_data"] 
+    uc_labels = ["LESS", "Model Dependent + CG FL", "SelectIT", "Model Independent + CG FL", "Random", "Full Dataset"]
+    ucl_shorthand = ["less", "mod_dep_fl", "select_it", "mod_ind_fl", "random", "full_data"] 
     # uc_labels = ["SelectIT", "Model Independent + CG FL", "Random", "Full Dataset"]
     # ucl_shorthand = ["select_it", "mod_ind_fl", "random", "full_data"] 
     # uc_labels = ["Model Dependent ICL Utility", "Model Dependent Gradient Utility", "Model Independent", "Random", "Full Dataset"]

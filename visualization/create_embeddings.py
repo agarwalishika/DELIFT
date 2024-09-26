@@ -9,6 +9,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import argparse
+import random
 import pickle
 import torch
 import json
@@ -101,7 +102,7 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             ds = process_column(ds, 'output')
 
             ds['data'] = "Instruction: " + ds['instruction'].astype(str) + "\nInput: " + ds['input'].astype(str) + "\nOutput: " + ds['output'].astype(str)
-            return ds.sample(n=30)
+            return ds.sample(n=30000)
 
         subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
         split_keys = dataset_config[key]['split_names'].split("|")
@@ -156,11 +157,8 @@ def parse_qa_datasets():
             if keep:
                 data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
 
-            if len(data) > 1000:
-                break
-        break
-
-    x = len(data)
+    data = random.shuffle(data)
+    x = 30000
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
@@ -176,11 +174,8 @@ def parse_qa_datasets():
 
             data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
         
-            if len(data) > 1000:
-                break
-        break
-    
-    x = len(data)
+    data = random.shuffle(data)
+    x = 30000
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])

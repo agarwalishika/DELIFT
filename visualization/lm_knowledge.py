@@ -41,7 +41,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
         metrics: np array of ROUGE-1 metrics of size 1x|prompts|
         generated_text: array of size 1x|prompts| of generated responses from the given LM
     """
-    max_length = min(tokenizer.model_max_length, 2048) - 150
+    max_length = int(tokenizer.model_max_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # model.to('cuda')
     model.eval()
