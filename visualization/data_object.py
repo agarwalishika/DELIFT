@@ -107,7 +107,6 @@ class DataObject():
         self.valid_existing_point_labels = existing_point_labels[1]
         self.test_existing_point_labels = existing_point_labels[2]
         
-
         self.train_new_data = new_data[0]
         self.valid_new_data = new_data[1]
         self.train_new_prompts, self.train_new_references = get_prompts_refs(new_data[0])

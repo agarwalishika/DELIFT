@@ -8,8 +8,8 @@ from prometheus_eval.prompts import ABSOLUTE_PROMPT, SCORE_RUBRIC_TEMPLATE
 from tqdm import tqdm
 
 rouge_metric = evaluate.load('rouge')
-#bleu_metric = evaluate.load('bleu')
-#bert_metric = evaluate.load('bertscore')
+bleu_metric = evaluate.load('bleu')
+bert_metric = evaluate.load('bertscore')
 
 def calculate_evaluate_metric(predictions, references, score="rouge", return_invidiual=True):
     """
@@ -41,8 +41,6 @@ def calculate_evaluate_metric(predictions, references, score="rouge", return_inv
         sim_metric = bert_metric
         metric_key = "f1"
     
-    # sim_metric = rouge_metric if score == "rouge" elif score == "bleu" bleu_metric else bert_metric
-    # metric_key = "rouge1" if score == "rouge" else "bleu"
     metrics = []
     for p, r in zip(predictions, references):
         if score == "bertscore":
@@ -54,13 +52,23 @@ def calculate_evaluate_metric(predictions, references, score="rouge", return_inv
 
 
 def calculate_bge(predictions, references, return_individual=True):
+    """
+    Calculates the cosine similarity between embedded predictions and references
+
+    Args:
+        predictions: list of strings for the hypothesis
+        references: list of strings for the reference
+        return_invidiual: if True, it will return the individual scores for corresponding prediction-reference pairs
+    Returns:
+        np array of metrics of size 1x1 if return_individual is True, else 1x|predictions|
+    """
     embedding_tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-large-en-v1.5')
     embedding_model = AutoModel.from_pretrained('BAAI/bge-large-en-v1.5').to('cpu')
     embedding_model.eval()
 
     if embedding_tokenizer.pad_token is None:
         embedding_tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        embedding_model.resize_token_embeddings(len(self.embedding_tokenizer))
+        embedding_model.resize_token_embeddings(len(embedding_tokenizer))
         
     embedding_model = embedding_model.to('cuda')
 
@@ -79,6 +87,7 @@ def calculate_bge(predictions, references, return_individual=True):
         ref_emb = find_embedding(ref)
         metrics.append(ref_emb.dot(pred_emb).item())
 
+    # clean up memory
     embedding_model.to('cpu')
     del embedding_model
     del embedding_tokenizer
@@ -89,6 +98,16 @@ def calculate_bge(predictions, references, return_individual=True):
         return np.array(metrics).mean()
 
 def calculate_prometheus(predictions, refs, return_individual=False):
+    """
+    Calculates the similarity between predictions and references using Prometheus (LLM-as-a-Judge).
+
+    Args:
+        predictions: list of strings for the hypothesis
+        references: list of strings for the reference
+        return_invidiual: if True, it will return the individual scores for corresponding prediction-reference pairs
+    Returns:
+        np array of metrics of size 1x1 if return_individual is True, else 1x|predictions|
+    """
     model = VLLM(model="prometheus-eval/prometheus-7b-v2.0")
     judge = PrometheusEval(model=model, absolute_grade_template=ABSOLUTE_PROMPT)
 
@@ -129,10 +148,8 @@ def calculate_prometheus(predictions, refs, return_individual=False):
         )
 
         metrics.append(score)
-
-        with open('prometheus_log.txt', 'a+') as f:
-            f.write(f'{i}, {p}, {r}, {score}, {feedback}\n')
-
+        
+    # clean up memory
     del model
     del judge
     torch.cuda.empty_cache()

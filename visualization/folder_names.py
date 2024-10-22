@@ -34,11 +34,7 @@ class FolderNames:
 
         # dataset configuration (first private sets, then the ground sets)
         self.dataset_config_file_code = lambda existing_data_name, new_data_name: f"{existing_data_name}|{new_data_name}"
-
-        # store the knowledge before the experiments (store the generated texts)
-        # self.before_exp_knowledge_file = lambda dataset_name, exp_config: os.path.join(self.main_folder, "before_exp", f"{exp_config}_{dataset_name}.pkl")
-        # if not os.path.exists(os.path.join(self.main_folder, "before_exp")): os.mkdir(os.path.join(self.main_folder, "before_exp"))
-
+        
         # subset creation: utility files
         self.subset_folder = os.path.join(self.main_folder, "utility")
         self.select_it_subset_file = lambda dataset_name: os.path.join(self.subset_folder, f"select_it_subset_{dataset_name}.pkl")

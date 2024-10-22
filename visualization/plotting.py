@@ -7,9 +7,9 @@ from models import Models
 import numpy as np
 import submodlib
 import pickle
-import torch
-import sys
 import os
+
+import sys
 sys.path.append('.')
 from subset_selection.src.utils.dist_utils.get_similarity_kernel_torch import ModelIndependentICLUtility
 from subset_selection.src.utils.dist_utils.get_icl_utility_kernel import ModelDependentICLUtility
@@ -159,7 +159,6 @@ class Plotting():
             xaxis=dict(title='t-SNE Component 1'),
             yaxis=dict(title='t-SNE Component 2'),
             legend=dict(orientation='h', y=-0.25),
-            #legend2=dict(orientation='h')#, y=-0.35)
         )
 
         fig = go.Figure(data=scatterplots, layout=layout)
@@ -233,6 +232,7 @@ class Plotting():
         """
         if "initial" in utility_criteria.lower():
             return None, []
+        
         if "less" in utility_criteria.lower():
             model_name = "Phi" if "Phi" in self.models.model_name else "Qwen"
             dataset_name = data.dataset_config_code.replace("|", "-")
@@ -254,7 +254,6 @@ class Plotting():
 
             with open(subset_file, 'rb') as f:
                 subset = pickle.load(f) 
-
 
         # calculate model dependent icl utility
         if "Model Dependent" in utility_criteria: #if "ICL Utility" in utility_criteria:

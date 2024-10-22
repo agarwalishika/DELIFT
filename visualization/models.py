@@ -1,8 +1,7 @@
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
 import sys
 sys.path.append('.')
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
-from sentence_transformers import SentenceTransformer
-import torch
 
 class Models:
     def __init__(self, embedding_model_name="BAAI/bge-large-en-v1.5", language_model_name="microsoft/Phi-3-mini-4k-instruct", sentence_model_name="paraphrase-MiniLM-L6-v2"):
@@ -36,14 +35,10 @@ class Models:
         self.language_model = AutoModelForCausalLM.from_pretrained(
             language_model_name, 
             quantization_config=bnb_config,
-            #load_in_4bit=True,
-            #device_map="auto",
             trust_remote_code=True,
             attn_implementation="flash_attention_2",
             torch_dtype=torch.bfloat16,
             use_cache=False,
-            # device_map='auto'
-            # device_map={"": PartialState().process_index},
         )
 
         # self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name)#, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2").to('cpu')
@@ -54,6 +49,3 @@ class Models:
         ## left padding for generation
         self.language_tokenizer = AutoTokenizer.from_pretrained(language_model_name, padding_side='left')
         self.language_tokenizer.pad_token = self.language_tokenizer.eos_token
-
-        # define a semantic similarity model (was used eariler to measure the performance of model inference, but we use ROUGE instead now)
-        ## self.sem_sim_model = SentenceTransformer(sentence_model_name)

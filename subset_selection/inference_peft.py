@@ -1,18 +1,26 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, EvalPrediction, TrainingArguments
-from datasets import Dataset
-from peft import LoraConfig #, prepare_model_for_kbit_training
-from trl import SFTTrainer, SFTConfig
-import torch
-import evaluate
 from bert_score import score as bert_score
+from datasets import Dataset
+from peft import LoraConfig
+from trl import SFTTrainer
 import numpy as np
-from accelerate import PartialState
+import evaluate
+import torch
 
 class InferencePEFT:
     def __init__(self, base_model_id):
         self.base_model_id = base_model_id
 
     def fine_tune_model(self, data, model_dir):
+        """
+        Uses QLoRA to fine-tune a model on the given data.
+
+        Args:
+            data: set of prompts and references (as in DataObject)
+            model_dir: path to save the fine-tuned model
+        Returns:
+            None
+        """
         quant_storage_dtype = torch.bfloat16
 
         bnb_config = BitsAndBytesConfig(
@@ -26,28 +34,18 @@ class InferencePEFT:
         model = AutoModelForCausalLM.from_pretrained(
             self.base_model_id, 
             quantization_config=bnb_config,
-            #load_in_4bit=True,
-            #device_map="auto",
             trust_remote_code=True,
             attn_implementation="flash_attention_2",
             torch_dtype=quant_storage_dtype,
             use_cache=False,
             device_map='auto'
-            # device_map={"": PartialState().process_index},
         )
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})
 
         self.num_gpus = torch.cuda.device_count()
         if self.num_gpus > 1:
             print(f"----------using {self.num_gpus}*GPUs----------")
             model = torch.nn.DataParallel(model)
-        
-        # Prepare the model for k-bit training (if needed)
-        # model = prepare_model_for_kbit_training(model)
-        
-        # torch.backends.cuda.matmul.allow_tf32 = False
-        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant":False})#gradient_checkpointing_kwargs={"use_reentrant":False}
-        # model.config.use_cache = False
-        # model.config.gradient_checkpointing = True
         
         tokenizer = AutoTokenizer.from_pretrained(self.base_model_id)
         tokenizer.pad_token = tokenizer.eos_token
@@ -108,7 +106,6 @@ class InferencePEFT:
         )
 
         max_seq_length = 1024
-
         training_arguments = TrainingArguments(
             output_dir=model_dir,
             num_train_epochs=20,
@@ -122,10 +119,9 @@ class InferencePEFT:
             save_steps=500,
             learning_rate=2.5e-5,
             bf16=True,
-            # tf32=True,
             logging_steps=10,
             optim="paged_adamw_8bit",
-            lr_scheduler_type="constant",  # Changed to constant
+            lr_scheduler_type="constant",
             weight_decay=0.01,
             report_to="tensorboard",
             gradient_checkpointing=True,
@@ -139,7 +135,7 @@ class InferencePEFT:
             peft_config=peft_config,
             max_seq_length=max_seq_length,
             tokenizer=tokenizer,
-            # compute_metrics=compute_metrics,
+            compute_metrics=compute_metrics,
             args=training_arguments,
             packing=True,
             eval_packing=False,
@@ -156,12 +152,7 @@ class InferencePEFT:
         ##########################
         # Train model
         ##########################
-        try:
-            trainer.train()
-        except Exception as e:
-            import shutil
-            shutil.rmtree(model_dir)
-            0/0
+        trainer.train()
 
         ##########################
         # SAVE MODEL FOR SAGEMAKER

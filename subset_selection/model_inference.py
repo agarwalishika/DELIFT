@@ -1,12 +1,22 @@
 import torch
 
 def batch_inference(model, tokenizer, input):
+    """
+    Performs encoding in batches.
+
+    Args:
+        model: Huggingface model
+        tokenizer: corresponding Huggingface tokenizer
+        input: set of prompts
+    Return:
+        input embeddings
+    """
     model.to('cuda')
     encoded_input = tokenizer(input, padding=True, truncation=True, return_tensors='pt').to(model.device)
     input_ids = encoded_input['input_ids']
     attention_mask = encoded_input['attention_mask']
             
-    bs = 1
+    bs = 16
     output = []
     for i in range(0, len(encoded_input['input_ids']), bs):
         output.extend(model(input_ids=input_ids[i:i+bs], attention_mask=attention_mask[i:i+bs]).pooler_output.detach())
@@ -16,6 +26,16 @@ def batch_inference(model, tokenizer, input):
     return output
 
 def batch_inference_text(model, tokenizer, input):
+    """
+    Performs inference in batches.
+
+    Args:
+        model: Huggingface model
+        tokenizer: corresponding Huggingface tokenizer
+        input: set of prompts
+    Return:
+        Natural language output for the given input
+    """
     device = 'cuda'
 
     model = model.to(device)

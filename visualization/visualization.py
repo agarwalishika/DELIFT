@@ -182,8 +182,6 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
             generated_text = pickle.load(f)
         generated_text = [cut(temp) for temp in generated_text]
         return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_invidiual=False), generated_text
-    else:
-        return [-100.0], None
 
     # if ICL is the subset quality evaluation technique
     if "ICL" in exp_config:
@@ -375,26 +373,24 @@ def main():
         graph_visualizer, results_visualizer = st.tabs(["Graph Visualization", "Results"])
 
         # set some constants
-        # uc_labels = ["Initial", "Model Dependent Utility", "Model Independent", "Random", "Full Dataset"]
-        # ucl_shorthand = ["before-exp", "mod_dep_fl", "mod_ind_fl", "random", "full_data"]
-        uc_labels = ["Initial", "Model Dependent + CG FL", "Model Independent + CG FL", "SelectIT", "Random", "Full Dataset"]
-        ucl_shorthand = ["before-exp", "mod_dep_fl", "mod_ind_fl", "select_it", "random", "full_data"] 
+        uc_labels = ["Initial", "LESS", "Model Dependent + CG FL", "SelectIT", "Model Independent + CG FL", "Random", "Full Dataset"]
+        ucl_shorthand = ["initial", "less", "mod_dep_fl", "select_it", "mod_ind_fl", "random", "full_data"]
         sl_labels = ["ICL", "PEFT"]
 
         # visualize one experiment
         with graph_visualizer:
             col1, col2 = st.columns(2, vertical_alignment="center")
-            # with col1:
-            #     ## define utility
-            #     utility_criteria = st.selectbox("Define utility using: ", uc_labels[1:])
-            # with col2:
-            #     ## choose subset learning technique
-            #     subset_learning = st.selectbox("Learn on the subset using:", sl_labels)
+            with col1:
+                ## define utility
+                utility_criteria = st.selectbox("Define utility using: ", uc_labels[1:])
+            with col2:
+                ## choose subset learning technique
+                subset_learning = st.selectbox("Learn on the subset using:", sl_labels)
 
-            # ## check if the experiment has been loaded
-            # exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
+            ## check if the experiment has been loaded
+            exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
 
-            # visualize_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, subset_percentage, threshold, labels, data, plotting, models, fn)
+            visualize_subset_experiment(existing_data_name, existing_data_ind, new_data_name, new_data_ind, exp_config, utility_criteria, subset_learning, subset_percentage, threshold, labels, data, plotting, models, fn)
         
         # sub-tab to display the tables of results from each experiment configuration
         with results_visualizer:
@@ -409,8 +405,8 @@ def main():
                 for subset_learning in sl_labels:
                     # load experiment configuration
                     exp_config = ucl_shorthand[uc_labels.index(utility_criteria)] + "-" + subset_learning + "-" + str(subset_percentage)
-                    # _, subset_idx = plotting.visualize_subset(subset_percentage, utility_criteria, data)
-                    # data.create_train_subset(subset_idx)
+                    _, subset_idx = plotting.visualize_subset(subset_percentage, utility_criteria, data)
+                    data.create_train_subset(subset_idx)
 
                     # calculate rouge on test set
                     r_val, _ = calculate_test_performance(all_data[new_data_ind][1], data, exp_config, models, fn, score="rouge")

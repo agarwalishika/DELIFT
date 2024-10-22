@@ -1,9 +1,10 @@
 from tqdm import tqdm
 import numpy as np
-import evaluate
-import torch
 import similarity
+import evaluate
 import pickle
+import torch
+
 rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
 bert_metric = evaluate.load('bertscore')
@@ -43,7 +44,6 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
     """
     max_length = int(tokenizer.model_max_length)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # model.to('cuda')
     model.eval()
 
     all_metrics = []
@@ -95,7 +95,6 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
             with open(save_path, "wb+") as f:
                     pickle.dump(all_gen_texts, f)
 
-    # model.to('cpu')
     return np.array(all_metrics), all_gen_texts
 
 

@@ -205,7 +205,6 @@ def parse_qr_datasets():
         dataset, key = config
         data = []
         for i in range(len(dataset)):
-            # instruction = "Given the following conversation, please reword the final utterance from the user into an single utterance that doesn't need the history to understand the user's intent. If the final utterance is a clear and standalone question, just RETURN THE FINAL UTTERANCE."
             instruction = "Given the following conversation, rewrite the user's final question or statement as a standalone query, removing any dependency on previous conversation context. If the final utterance is already a clear, self-contained question, simply repeat it verbatim."
             conversation = ""
             for turn in dataset[i]['input']:

@@ -1,8 +1,0 @@
-rubric_data = {
-    "criteria": "Is the model proficient in following the instruction given any context?",
-    "score1_description": "The model neglects to follow the instruction.",
-    "score2_description": "The model follows only parts of the instruction, and is not able to complete the instruction.",
-    "score3_description": "The model follows the instruction, but the answer does not (semantically) match the ground truth answer."
-    "score4_description": "The model follows the instruction, but parts of the answer (semantically) match the ground truth answer."
-    "score5_description": "The model follows the instruction, and the whole answer (semantically) matches the ground truth answer."
-}
