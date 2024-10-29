@@ -45,7 +45,7 @@ class InferencePEFT:
         self.num_gpus = torch.cuda.device_count()
         if self.num_gpus > 1:
             print(f"----------using {self.num_gpus}*GPUs----------")
-            model = torch.nn.DataParallel(model)
+            model = torch.nn.DataParallel(model).module
         
         tokenizer = AutoTokenizer.from_pretrained(self.base_model_id)
         tokenizer.pad_token = tokenizer.eos_token

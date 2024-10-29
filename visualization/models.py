@@ -4,7 +4,7 @@ import sys
 sys.path.append('.')
 
 class Models:
-    def __init__(self, embedding_model_name="BAAI/bge-large-en-v1.5", language_model_name="microsoft/Phi-3-mini-4k-instruct", sentence_model_name="paraphrase-MiniLM-L6-v2"):
+    def __init__(self, embedding_model_name="BAAI/bge-large-en-v1.5", language_model_name="microsoft/Phi-3-mini-128k-instruct", sentence_model_name="paraphrase-MiniLM-L6-v2"):
         """
         Since multiple files requires model and tokenizer objects, instead of creating multiple instances in each file, we can use the Models class to keep the same instances across all the files.
         """
@@ -15,7 +15,7 @@ class Models:
         self.sentence_model_name = sentence_model_name
 
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(embedding_model_name)
-        self.embedding_model = AutoModel.from_pretrained(embedding_model_name).to('cpu')
+        self.embedding_model = AutoModel.from_pretrained(embedding_model_name)
         self.embedding_model.eval()
 
         if self.embedding_tokenizer.pad_token is None:
@@ -44,7 +44,7 @@ class Models:
         # self.language_model = AutoModelForCausalLM.from_pretrained(language_model_name)#, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2").to('cpu')
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs!")
-            self.language_model = torch.nn.DataParallel(self.language_model)
+            self.language_model = torch.nn.DataParallel(self.language_model).module
         
         ## left padding for generation
         self.language_tokenizer = AutoTokenizer.from_pretrained(language_model_name, padding_side='left')

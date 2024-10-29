@@ -70,10 +70,12 @@ class Plotting():
         scatterplots = []
         scatterplots.append(create_scatter(self.data.train_new_vis_dims, self.data.train_new_point_labels, f"training: {new_data_name}", "dodgerblue"))
         scatterplots.append(create_scatter(self.data.valid_new_vis_dims, self.data.valid_new_point_labels, f"validation: {new_data_name}", "dodgerblue"))
-        scatterplots.append(create_scatter(self.data.test_new_vis_dims, self.data.test_new_point_labels, f"testing: {new_data_name}", "dodgerblue"))
         scatterplots.append(create_scatter(self.data.train_existing_vis_dims, self.data.train_existing_point_labels, f"training: {existing_data_name}", "orange"))
         scatterplots.append(create_scatter(self.data.valid_existing_vis_dims, self.data.valid_existing_point_labels, f"validation: {existing_data_name}", "orange"))
-        scatterplots.append(create_scatter(self.data.test_existing_vis_dims, self.data.test_existing_point_labels, f"testing: {existing_data_name}", "orange"))
+
+        if self.data.test_new_vis_dims is not None:
+            scatterplots.append(create_scatter(self.data.test_new_vis_dims, self.data.test_new_point_labels, f"testing: {new_data_name}", "dodgerblue"))
+            scatterplots.append(create_scatter(self.data.test_existing_vis_dims, self.data.test_existing_point_labels, f"testing: {existing_data_name}", "orange"))
 
         # create the figure
         layout = go.Layout(

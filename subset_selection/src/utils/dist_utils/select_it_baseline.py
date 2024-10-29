@@ -18,7 +18,8 @@ class SelectIT:
         """
         self.model = model  # Convert the model to the specified device
         self.tokenizer = tokenizer
-        self.device = device
+        self.device = self.model.module.device if type(model) == torch.nn.DataParallel else self.model.device
+        self.model_name = str(type(self.model))
     
         self.RATING_PROMPTS = ["Assign a score from 1 to 5 to each assistant based on how accurately they follow the instructions and response provided, ensuring the score is represented clearly on its own.",
                         "Score each assistant on a scale from one to five, reflecting the accuracy of their adherence to the instructions and input, and present this score plainly without the need for extra details.",
@@ -41,56 +42,13 @@ class SelectIT:
             rating_prompt = promote + '\n' + instruction + ins + '\n' + response + res + ress
             rating_prompt_list.append(rating_prompt)
         return rating_prompt_list
-    
-    # def token_level_self_reflection(self, prompts, references, k=5):
-    #     rps = self.construction_rps(prompts, references)
-    #     pro = []
-    #     for idx, p in enumerate(rps):
-    #         tokenized = self.tokenizer(p, padding=True, return_tensors="pt")
-    #         tokenized.input_ids = tokenized.input_ids.cuda()
-    #         tokenized.attention_mask = tokenized.attention_mask.cuda()
-    #         with torch.no_grad():
-    #             try:
-    #                 outputs = self.model(**tokenized)
-    #                 predictions = outputs[0]
-    #                 logits = predictions[:, -1, :]
-    #                 softmax_logits = torch.softmax(logits.float(), dim=-1)
-    #                 for index in range(1):
-    #                     tmp_res = [float(softmax_logits[index][29896]), float(softmax_logits[index][29906]),
-    #                             float(softmax_logits[index][29941]), float(softmax_logits[index][29946]),
-    #                             float(softmax_logits[index][29945])]
-    #                     pro.append(tmp_res)
-    #             except Exception as ex:
-    #                 print(ex)
-    #     pro_softmax = []
-    #     for item in pro:
-    #         tmp_pro_softmax = item
-    #         tmp0_pro_softmax = []
-    #         tmp1_pro_softmax = []
-    #         for idx, item in enumerate(tmp_pro_softmax):
-    #             tmp0_pro_softmax.append(np.exp(tmp_pro_softmax[idx] / sum(tmp_pro_softmax)))
-    #         for jdx, item in enumerate(tmp0_pro_softmax):
-    #             tmp1_pro_softmax.append(tmp0_pro_softmax[jdx] / sum(tmp0_pro_softmax))
-    #         pro_softmax.append(tmp1_pro_softmax)
 
-    #     data_num = len(pro_softmax)
-    #     token_level_score = []
-    #     for idx in range(data_num):
-    #         score_base = np.argmax(pro_softmax[idx])
-    #         tmp_sum = 0
-    #         for tmp_idx in range(len(pro_softmax[idx])):
-    #             tmp_sum += pro_softmax[idx][score_base] - pro_softmax[idx][tmp_idx]
-    #         tmp_sum = tmp_sum / (k - 1)
-    #         token_score = (score_base + 1) * tmp_sum
-    #         token_level_score.append(token_score)
-    #     return token_level_score
-    
     def sentence_level_self_reflection(self, prompts, references, alpha=0.2, k=5):
         # self.model.to('cuda')
         rps = self.construction_rps(prompts, references)
         pro = []
         for idx, p in enumerate(rps):
-            tokenized = self.tokenizer(p, padding=True, return_tensors="pt").to(self.model.device)
+            tokenized = self.tokenizer(p, padding=True, return_tensors="pt").to(self.device)
             tokenized.input_ids = tokenized.input_ids.cuda()
             tokenized.attention_mask = tokenized.attention_mask.cuda()
             with torch.no_grad():
@@ -99,13 +57,13 @@ class SelectIT:
                     predictions = outputs[0]
                     logits = predictions[:, -1, :]
                     softmax_logits = torch.softmax(logits.float(), dim=-1)
-                    if "Phi" in str(type(self.model)):
+                    if "Phi" in self.model_name:
                         for index in range(1):
                             tmp_res = [float(softmax_logits[index][29896]), float(softmax_logits[index][29906]),
                                     float(softmax_logits[index][29941]), float(softmax_logits[index][29946]),
                                     float(softmax_logits[index][29945])]
                             pro.append(tmp_res)
-                    elif "Qwen" in str(type(self.model)):
+                    elif "Qwen" in self.model_name:
                         for index in range(1):
                             tmp_res = [float(softmax_logits[index][16]), float(softmax_logits[index][17]),
                                     float(softmax_logits[index][18]), float(softmax_logits[index][19]),

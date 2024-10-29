@@ -13,14 +13,6 @@
         "input": "inputs_pretokenized",
         "output": "targets_pretokenized",
         "split_names": "train|validation|test"
-    },
-
-    "Muennighoff/natural-instructions":
-    {
-        "instruction": "definition",
-        "input": "inputs",
-        "output": "targets",
-        "split_names": "train|test"
     }
 
 }

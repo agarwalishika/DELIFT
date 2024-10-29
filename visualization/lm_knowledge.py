@@ -9,7 +9,7 @@ rouge_metric = evaluate.load('rouge')
 bleu_metric = evaluate.load('bleu')
 bert_metric = evaluate.load('bertscore')
 
-def calculate_similarity(predictions, references, score="rouge", return_invidiual=True):
+def calculate_similarity(predictions, references, score="rouge", return_individual=True):
     """
     Calculates the similarity between the predictions and references
 
@@ -22,9 +22,11 @@ def calculate_similarity(predictions, references, score="rouge", return_invidiua
         np array of metrics of size 1x1 if return_individual is True, else 1x|predictions|
     """
     if "rouge" in score or "bleu" in score or "bertscore" in score:
-        return similarity.calculate_evaluate_metric(predictions, references, score, return_invidiual)
+        return similarity.calculate_evaluate_metric(predictions, references, score, return_individual)
     elif "bge" in score:
-        return similarity.calculate_bge(predictions, references, return_invidiual)
+        return similarity.calculate_bge(predictions, references, return_individual)
+    elif "prometheus" in score:
+        return similarity.calculate_prometheus(predictions, references, return_individual)
     else:
         raise ValueError(f"Invalid similarity metric: {score}")
     
@@ -43,7 +45,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
         generated_text: array of size 1x|prompts| of generated responses from the given LM
     """
     max_length = int(tokenizer.model_max_length)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = model.module.device if type(model) == torch.nn.DataParallel else model.device
     model.eval()
 
     all_metrics = []
@@ -65,7 +67,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
             truncation=True,
             max_length=max_length,
             return_tensors='pt'
-        ).to(model.device)
+        ).to(device)
 
         with torch.no_grad():
             gen_tokens = model.generate(
@@ -96,58 +98,3 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
                     pickle.dump(all_gen_texts, f)
 
     return np.array(all_metrics), all_gen_texts
-
-
-def perform__inference(model, tokenizer, prompts, references, batch_size=3):
-    """
-    Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
-
-    Args:
-        model: AutoModelForCausalLM instance
-        tokenizer: AutoTokenizer instance with left padding enabled
-        prompts: list of prompts
-        references: list of references
-    Return:
-        metrics: np array of ROUGE-1 metrics of size 1x|prompts|
-        generated_text: array of size 1x|prompts| of generated responses from the given LM
-    """
-    prompts = list(prompts)
-    for j in range(len(prompts)):
-        prompts[j] += "Output:"
-
-    metrics = []
-    generated_text = []
-    for j in tqdm(range(0, len(prompts), batch_size)):
-        batch_prompts = prompts[j:j+batch_size]
-        batch_ref = references[j:j+batch_size]
-
-        tokenized_output = tokenizer(batch_prompts, padding=True, return_tensors='pt').to(model.device)
-        tokenized_output['input_ids'] = tokenized_output['input_ids'][:, :tokenizer.model_max_length-100]
-        tokenized_output['attention_mask'] = tokenized_output['attention_mask'][:, :tokenizer.model_max_length-100]
-        gen_tokens = model.generate(
-            **tokenized_output,
-            max_length=tokenizer.model_max_length,
-            pad_token_id=tokenizer.eos_token_id,
-            do_sample=True, 
-            top_k=100, 
-            top_p=0.7,
-            temperature=0.8
-        ).cpu()
-
-        # decode
-        for x in range(batch_size):
-            prompt_length = len(tokenized_output[x])
-            gen_text = tokenizer.decode(gen_tokens[x][prompt_length:]).strip()
-            ## take only the first line of the generated text
-            gen_text = gen_text[:gen_text.find('\n')].strip()
-
-            # evaluate
-            sim = rouge_metric.compute(predictions=[gen_text], references=[batch_ref[x].strip()])['rouge1']
-            metrics.append(sim)
-            generated_text.append(gen_text)
-        
-        del tokenized_output, gen_text
-        torch.cuda.empty_cache()
-
-    metrics = np.array(metrics)
-    return metrics, generated_text

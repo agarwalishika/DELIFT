@@ -82,6 +82,7 @@ class DataObject():
         self.valid_existing_vis_dims = self.train_existing_vis_dims
         self.train_existing_point_labels = existing_point_labels
         self.valid_existing_point_labels = self.train_existing_point_labels
+        self.test_existing_vis_dims = None
 
         self.train_new_data = new_data
         self.valid_new_data = self.train_new_data
@@ -91,6 +92,7 @@ class DataObject():
         self.valid_new_vis_dims = self.train_new_vis_dims
         self.train_new_point_labels = new_point_labels
         self.valid_new_point_labels = self.train_new_point_labels
+        self.test_new_vis_dims = None
     
     def init_new_version(self, existing_data, existing_vis_dims, existing_point_labels, new_data, new_vis_dims, new_point_labels):
         """

@@ -102,7 +102,7 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             ds = process_column(ds, 'output')
 
             ds['data'] = "Instruction: " + ds['instruction'].astype(str) + "\nInput: " + ds['input'].astype(str) + "\nOutput: " + ds['output'].astype(str)
-            return ds.sample(n=30000)
+            return ds.sample(frac=1)
 
         subset = dataset_config[key]["subset"] if "subset" in dataset_config[key].keys() else None
         split_keys = dataset_config[key]['split_names'].split("|")
@@ -118,7 +118,7 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             test_ds = get_split_ds(split_keys[2], subset)
 
         new_key = key[key.rfind('/')+1:]
-        full_dataset[new_key] = (train_ds, valid_ds, test_ds)
+        full_dataset[new_key] = [train_ds, valid_ds, test_ds]
     
     return full_dataset
 
@@ -137,7 +137,7 @@ def parse_qa_datasets():
     """
     full_dataset = {}
 
-    ds = load_dataset('hotpotqa/hotpot_qa', 'fullwiki')
+    ds = load_dataset('hotpotqa/hotpot_qa', 'fullwiki', trust_remote_code=True)
     data = []
     for dset in [ds['train'], ds['validation'], ds['test']]:
         for i in dset:
@@ -162,7 +162,7 @@ def parse_qa_datasets():
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
-    full_dataset['hotpot_qa'] = (train_ds, valid_ds, test_ds)
+    full_dataset['hotpot_qa'] = [train_ds, valid_ds, test_ds]
 
     data = []
     ds = load_dataset("rajpurkar/squad")
@@ -179,7 +179,7 @@ def parse_qa_datasets():
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
-    full_dataset['squad'] = (train_ds, valid_ds, test_ds)
+    full_dataset['squad'] = [train_ds, valid_ds, test_ds]
 
     return full_dataset
 
@@ -226,7 +226,7 @@ def parse_qr_datasets():
         test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
 
         new_key = key[key.rfind('/')+1:]
-        full_dataset[new_key] = (train_ds, valid_ds, test_ds)
+        full_dataset[new_key] = [train_ds, valid_ds, test_ds]
     return full_dataset
 
 def mt_bench_processing(d):
@@ -316,7 +316,7 @@ def parse_benchmark_datasets(json_file='visualization/benchmark_datasets.json'):
 
         # create new key with "benchmark" tag
         new_key = "benchmark_" + key[key.rfind('/')+1:]
-        full_dataset[new_key] = (train_ds, valid_ds, test_ds)
+        full_dataset[new_key] = [train_ds, valid_ds, test_ds]
     
     return full_dataset
 
@@ -368,7 +368,7 @@ def main(args):
     for key in tqdm(datasets.keys()):
         pkl_name = key + ".pkl"
         print(os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)))
-        if not os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)):
+        if not os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)):            
             train_ds = find_embedding(datasets[key][0]['data'])
             valid_ds = find_embedding(datasets[key][1]['data'])
             test_ds = find_embedding(datasets[key][2]['data'])
@@ -393,6 +393,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use_case", type=int, default=2)
+    parser.add_argument("--use_case", type=int, default=1)
     args = parser.parse_args()
     main(args)

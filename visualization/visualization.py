@@ -181,7 +181,7 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
         with open(exp_file, 'rb') as f:
             generated_text = pickle.load(f)
         generated_text = [cut(temp) for temp in generated_text]
-        return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_invidiual=False), generated_text
+        return calculate_similarity(generated_text, test_references[:len(generated_text)], score=score, return_individual=False), generated_text
 
     # if ICL is the subset quality evaluation technique
     if "ICL" in exp_config:
@@ -207,7 +207,7 @@ def calculate_test_performance(test_data, data: DataObject, exp_config, models: 
     with open(exp_file, 'wb+') as f:
         pickle.dump(generated_text, f)
     
-    return calculate_similarity(generated_text, test_references, score=score, return_invidiual=False), generated_text
+    return calculate_similarity(generated_text, test_references, score=score, return_individual=False), generated_text
 
 def visualize_subset_experiment(existing_data_name, exist_ind, new_data_name, new_ind, exp_config, utility_criteria, subset_learning, subset_percentage, knowledge_threshold, labels, data: DataObject, plotting: Plotting, models: Models, fn: FolderNames):
     """
@@ -322,7 +322,7 @@ def main():
         # Define the model, datasets and performance thresholds
         col1, col2 = st.columns(2, vertical_alignment="center")
         with col1:
-            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "Qwen/Qwen2-72B-Instruct") #"Qwen/Qwen2-72B-Instruct") #"microsoft/Phi-3-mini-128k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
+            model_name = st.text_input("Input HuggingFace Model name (after 'huggingface.co/'):", "microsoft/Phi-3-mini-128k-instruct") #"Qwen/Qwen2-72B-Instruct") #"microsoft/Phi-3-mini-128k-instruct") #"EleutherAI/gpt-neo-125m") #"ibm-granite/granite-7b-base")
 
             col1a, col1b = st.columns(2, vertical_alignment="center")
             with col1a:
