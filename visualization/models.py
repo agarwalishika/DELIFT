@@ -15,6 +15,8 @@ class Models:
         self.sentence_model_name = sentence_model_name
 
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(embedding_model_name)
+        self.embedding_tokenizer.max_subtokens_sequence_length = 512
+        self.embedding_tokenizer.model_max_length = 512
         self.embedding_model = AutoModel.from_pretrained(embedding_model_name)
         self.embedding_model.eval()
 

@@ -16,6 +16,7 @@ from subset_selection.src.utils.dist_utils.get_icl_utility_kernel import ModelDe
 from subset_selection.src.utils.dist_utils.superfiltering_utility import SuperfilteringUtility
 from subset_selection.src.utils.dist_utils.select_it_baseline import SelectIT
 from subset_selection.subset_random import RandomSubsetCreation
+from subset_selection.subset_deft_ucs import DEFTSubsetCreation
 from subset_selection.inference_peft import InferencePEFT
 from subset_selection.subset_fl import FLSubsetCreation 
 from subset_selection.inference_icl import InferenceICL
@@ -236,7 +237,7 @@ class Plotting():
             return None, []
         
         if "less" in utility_criteria.lower():
-            model_name = "Phi" if "Phi" in self.models.model_name else "Qwen"
+            model_name = "Llama" if "Llama" in self.models.model_name else "Mistral"
             dataset_name = data.dataset_config_code.replace("|", "-")
             subset_file = self.fn.less_subset_file(model_name, dataset_name)
             with open(subset_file, 'rb') as f:
@@ -307,10 +308,10 @@ class Plotting():
         print('Finding subset...')
         if "FL" in utility_criteria:
             fl_subset = FLSubsetCreation()
-            if data.use_case == DataObjectConstants.DATA_OBJECT_BENCHMARK:
-                subset = fl_subset.create_mutual_information_subset(data_sijs=data_sijs, query_sijs=private_sijs, k=k)
-            elif data.use_case == DataObjectConstants.DATA_OBJECT_SAME_DATSET:
+            if data.use_case == DataObjectConstants.DATA_OBJECT_SAME_DATSET or "FL Only" in utility_criteria:
                 subset = fl_subset.create_subset(data_sijs=data_sijs, k=k)
+            elif data.use_case == DataObjectConstants.DATA_OBJECT_BENCHMARK:
+                subset = fl_subset.create_mutual_information_subset(data_sijs=data_sijs, query_sijs=private_sijs, k=k)
             else:
                 subset = fl_subset.create_conditional_gain_subset(data_sijs=data_sijs, private_sijs=private_sijs, k=k)
         elif "Random" in utility_criteria:
@@ -319,6 +320,9 @@ class Plotting():
         elif "Full" in utility_criteria:
             random_subset = RandomSubsetCreation()
             subset = random_subset.create_subset(len(data.train_new_data), 1.0)
+        elif "DEFT" in utility_criteria:
+            deft_ucs = DEFTSubsetCreation(self.models)
+            subset = deft_ucs.create_subset(data.train_new_data, k=k)
 
         # display the subset
         x_data = np.array(self.data.train_new_vis_dims)[:, 0]
@@ -383,13 +387,16 @@ class Plotting():
             return self.plot_knowledge(label_ind, io[0], io[1], experiment_file, metrics_file, threshold, prefix=prefix)
         
         # if PEFT is the subset quality evaluation
-        if "PEFT" in exp_config:
+        if "FT" in exp_config:
             peft_model_dir = self.fn.peft_ft_model(dataset_config_code, exp_config)
 
             # if there is no PEFT model stored on the given data (in the DataObject), fine-tune and store it
             if not os.path.exists(peft_model_dir):
                 peft = InferencePEFT(self.models.model_name)
-                peft.fine_tune_model(data, peft_model_dir)
+                if "PEFT" in exp_config:
+                    peft.fine_tune_model(data, peft_model_dir)
+                elif "FFT" in exp_config:
+                    peft.fully_fine_tune_model(data, peft_model_dir)
                 
 
             # if there is no inference performed on the PEFT model, perform and store the results

@@ -31,7 +31,7 @@ def calculate_similarity(predictions, references, score="rouge", return_individu
         raise ValueError(f"Invalid similarity metric: {score}")
     
 
-def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_path=None):
+def perform_inference(model, tokenizer, prompts, references, batch_size=4, save_path=None):
     """
     Performs inference on prompts and computes the ROUGE between the generated text and corresponding reference
 
@@ -44,6 +44,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
         metrics: np array of ROUGE-1 metrics of size 1x|prompts|
         generated_text: array of size 1x|prompts| of generated responses from the given LM
     """
+    tokenizer.model_max_length = 1024
     max_length = int(tokenizer.model_max_length)
     device = model.module.device if type(model) == torch.nn.DataParallel else model.device
     model.eval()
@@ -52,8 +53,7 @@ def perform_inference(model, tokenizer, prompts, references, batch_size=2, save_
     all_gen_texts = []
 
     # Process prompts in batches
-    max_len = min(len(prompts), 200)
-    for i in tqdm(range(0, max_len, batch_size), total=max_len):
+    for i in tqdm(range(0, len(prompts), batch_size)):
         batch_prompts = prompts[i:i+batch_size]
         batch_references = references[i:i+batch_size]
 

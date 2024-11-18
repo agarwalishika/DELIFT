@@ -118,7 +118,7 @@ def parse_hf_datasets(json_file='visualization/huggingface_datasets.json'):
             test_ds = get_split_ds(split_keys[2], subset)
 
         new_key = key[key.rfind('/')+1:]
-        full_dataset[new_key] = [train_ds, valid_ds, test_ds]
+        full_dataset[new_key] = (train_ds, valid_ds, test_ds)
     
     return full_dataset
 
@@ -162,7 +162,7 @@ def parse_qa_datasets():
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
-    full_dataset['hotpot_qa'] = [train_ds, valid_ds, test_ds]
+    full_dataset['hotpot_qa'] = (train_ds, valid_ds, test_ds)
 
     data = []
     ds = load_dataset("rajpurkar/squad")
@@ -179,7 +179,7 @@ def parse_qa_datasets():
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
-    full_dataset['squad'] = [train_ds, valid_ds, test_ds]
+    full_dataset['squad'] = (train_ds, valid_ds, test_ds)
 
     return full_dataset
 
@@ -226,7 +226,7 @@ def parse_qr_datasets():
         test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
 
         new_key = key[key.rfind('/')+1:]
-        full_dataset[new_key] = [train_ds, valid_ds, test_ds]
+        full_dataset[new_key] = (train_ds, valid_ds, test_ds)
     return full_dataset
 
 def mt_bench_processing(d):
@@ -320,6 +320,20 @@ def parse_benchmark_datasets(json_file='visualization/benchmark_datasets.json'):
     
     return full_dataset
 
+def parse_gsm8k():
+    full_dataset = {}
+    gsm = load_dataset('openai/gsm8k', 'main')['test'].to_pandas()
+    gsm['data'] = "Instruction: Solve the below math problem. Think step by step.\nInput: " + gsm['question'].astype(str) + "\nOutput: " + gsm['answer'].astype(str)
+
+    x = len(gsm)
+    train_ds = pd.DataFrame(gsm[:int(0.7*x)], columns=['data'])[:200]
+    valid_ds = pd.DataFrame(gsm[int(0.7*x):int(0.9*x)], columns=['data'])
+    test_ds = pd.DataFrame(gsm[int(0.9*x):], columns=['data'])
+
+    full_dataset['benchmark_gsm8k'] = (train_ds, valid_ds, test_ds)
+    return full_dataset
+
+
 def extract_prompt(x):
     x = str(x)
     s = 'Output:'
@@ -354,11 +368,12 @@ def main(args):
     if args.use_case == 1:
         datasets = parse_hf_datasets()
     elif args.use_case == 2:
-        datasets = parse_benchmark_datasets()
+        datasets = parse_gsm8k()
+        # datasets = parse_benchmark_datasets()
         hf_dataset = parse_hf_datasets()
         datasets.update(hf_dataset)
-        qa_dataset = parse_qa_datasets()
-        datasets.update(qa_dataset)
+        # qa_dataset = parse_qa_datasets()
+        # datasets.update(qa_dataset)
     elif args.use_case == 3:
         datasets = parse_qr_datasets()
         qa_datasets = parse_qa_datasets()
@@ -368,7 +383,7 @@ def main(args):
     for key in tqdm(datasets.keys()):
         pkl_name = key + ".pkl"
         print(os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)))
-        if not os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)):            
+        if not os.path.exists(os.path.join(spec_fn.dataset_pkl_folder, pkl_name)):
             train_ds = find_embedding(datasets[key][0]['data'])
             valid_ds = find_embedding(datasets[key][1]['data'])
             test_ds = find_embedding(datasets[key][2]['data'])
@@ -393,6 +408,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use_case", type=int, default=1)
+    parser.add_argument("--use_case", type=int, default=2)
     args = parser.parse_args()
     main(args)

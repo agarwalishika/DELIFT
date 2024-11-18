@@ -58,6 +58,7 @@ class FolderNames:
 
         # peft specific
         self.peft_ft_model = lambda dataset_name, exp_config: os.path.join(self.main_folder, "peft_ft_models", parse_file_name(dataset_name, exp_config))
+        self.fft_ft_model = lambda dataset_name, exp_config: os.path.join(self.main_folder, "peft_ft_models", "FFT_" + parse_file_name(dataset_name, exp_config))
         if not os.path.exists(os.path.join(self.main_folder, "peft_ft_models")): os.mkdir(os.path.join(self.main_folder, "peft_ft_models"))
 
         # less specific
