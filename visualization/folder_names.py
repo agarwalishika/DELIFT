@@ -19,7 +19,7 @@ class FolderNames:
         model_name = model_name[model_name.rfind('/')+1:]
         
         # main cache folder
-        self.base_folder = os.path.join("visualization", cache_name)
+        self.base_folder = os.path.join("/home/ishikaa2/delift/visualization", cache_name)
         if not os.path.exists(self.base_folder): os.mkdir(self.base_folder)
 
         self.main_folder = os.path.join(self.base_folder, model_name)
