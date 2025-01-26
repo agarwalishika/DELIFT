@@ -1,18 +1,10 @@
 {
-    "cais/mmlu":
+    "llm-blender/mix-instruct":
     {
-        "subset": "all",
-        "instruction": "subject",
-        "input": "question|choices",
-        "output": "answer",
-        "split_names": "auxiliary_train|validation|test"
-
-    },
-
-    "lmsys/mt_bench_human_judgments":
-    {
-        "special_processing": "True",
-        "split_names": "human"
+        "instruction": "instruction",
+        "input": "input",
+        "output": "output",
+        "split_names": "train|validation|test"
     }
 
 }

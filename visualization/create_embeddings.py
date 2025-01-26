@@ -158,7 +158,7 @@ def parse_qa_datasets():
                 data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
 
     data = random.shuffle(data)
-    x = 30000
+    x = len(data)
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
@@ -175,7 +175,7 @@ def parse_qa_datasets():
             data.append(f"Instruction:\nContext: {instruction}\nInput:\n{input}\nOutput:\n{output}\n")
         
     data = random.shuffle(data)
-    x = 30000
+    x = len(data)
     train_ds = pd.DataFrame(data[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(data[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(data[int(0.9*x):], columns=['data'])
@@ -326,13 +326,48 @@ def parse_gsm8k():
     gsm['data'] = "Instruction: Solve the below math problem. Think step by step.\nInput: " + gsm['question'].astype(str) + "\nOutput: " + gsm['answer'].astype(str)
 
     x = len(gsm)
-    train_ds = pd.DataFrame(gsm[:int(0.7*x)], columns=['data'])[:200]
+    train_ds = pd.DataFrame(gsm[:int(0.7*x)], columns=['data'])
     valid_ds = pd.DataFrame(gsm[int(0.7*x):int(0.9*x)], columns=['data'])
     test_ds = pd.DataFrame(gsm[int(0.9*x):], columns=['data'])
 
     full_dataset['benchmark_gsm8k'] = (train_ds, valid_ds, test_ds)
     return full_dataset
 
+def parse_alpaca_dataset():
+    full_dataset = {}
+    alpaca = load_dataset('tatsu-lab/alpaca')['test'].to_pandas()
+    alpaca['data'] = f"Instruction: {alpaca['instruction']}\nInput: {alpaca['input']}\nOutput: {alpaca['output']}"
+
+    x = len(alpaca)
+    train_ds = pd.DataFrame(alpaca[:int(0.7*x)], columns=['data'])
+    valid_ds = pd.DataFrame(alpaca[int(0.7*x):int(0.9*x)], columns=['data'])
+    test_ds = pd.DataFrame(alpaca[int(0.9*x):], columns=['data'])
+
+    full_dataset['alpaca'] = (train_ds, valid_ds, test_ds)
+
+    import json
+
+    with open("/home/ishikaa2/delift/visualization/chatalpaca-20k.json", 'r') as f:
+        data = f.readlines()
+
+    chatalpaca = []
+    for d in data:
+        temp = json.loads(d)
+        instruction = "Below is a conversation between you and a human. Complete the request of the human."
+        input = ""
+        for turn in temp['conversations'][:-1]:
+            input += f"{turn['from']}: {turn['value']}\n"
+        output = f"{temp['conversations'][-1]['from']}: {temp['conversations'][-1]['value']}\n"
+        chatalpaca.append(f"Instruction: {instruction}\nInput: {input}\nOutput: {output}")
+    
+    x = len(chatalpaca)
+    train_ds = pd.DataFrame(chatalpaca[:int(0.7*x)], columns=['data'])
+    valid_ds = pd.DataFrame(chatalpaca[int(0.7*x):int(0.9*x)], columns=['data'])
+    test_ds = pd.DataFrame(chatalpaca[int(0.9*x):], columns=['data'])
+    full_dataset['chatalpaca-20k'] = (train_ds, valid_ds, test_ds)
+
+
+    return full_dataset
 
 def extract_prompt(x):
     x = str(x)
@@ -375,9 +410,10 @@ def main(args):
         # qa_dataset = parse_qa_datasets()
         # datasets.update(qa_dataset)
     elif args.use_case == 3:
-        datasets = parse_qr_datasets()
-        qa_datasets = parse_qa_datasets()
-        datasets.update(qa_datasets)
+        # datasets = parse_qr_datasets()
+        # qa_datasets = parse_qa_datasets()
+        # datasets.update(qa_datasets)
+        datasets = parse_alpaca_datasets()
     
     print('finding embeddings')
     for key in tqdm(datasets.keys()):

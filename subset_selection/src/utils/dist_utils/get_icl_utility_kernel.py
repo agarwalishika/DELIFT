@@ -277,6 +277,9 @@ if __name__ == "__main__":
     import time
     start = time.time()
     argparser = ArgumentParser()
+    argparser.add_argument("--existing_data_name", type=str, default="mix-instruct")
+    argparser.add_argument("--new_data_name", type=str, default="mix-instruct")
+    argparser.add_argument("--model_name", type=str, default="facebook/opt-125m")
     argparser.add_argument('--is_data', type=str, default="True")
     args = argparser.parse_args()
 
@@ -368,8 +371,6 @@ if __name__ == "__main__":
 
     # pop the first element from the queue
     current_block = queue.pop(0)
-    with open("evaluation.txt", "a+") as f:
-        f.write(f"{args.is_data}, {current_block}\n")
 
     # dump back the queue with the first element popped
     # for running this file for all blocks, make sure that each block is run after 20-30 seconds gaps
