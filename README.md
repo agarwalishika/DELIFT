@@ -37,9 +37,11 @@ Note: the middle step can be skipped, as `visualization.py` also has the same co
 
 ## Citation
 Please cite our paper:
+```
 @inproceedings{agarwal2025delift,
    title={DELIFT: Data Efficient Language model Instruction Fine Tuning},
    author={Agarwal, Ishika and Killamsetty, Krishna and Popa, Lucian and Danilevsky, Marina},
    booktitle={International Conference on Learning Representations (ICLR)},
    year={2025}
 }
+```
