@@ -173,7 +173,7 @@ class ModelDependentICLUtility:
         without_icl_batches = []
         batched_original_indices = []
 
-        for batch_indices in quantiles:
+        for batch_indices in tqdm(quantiles, desc="prepare_batch_inputs"):
             batch_prompts = [prompts_with_instruction_no_icl[i] for i in batch_indices]
             batch_responses = [responses[i] for i in batch_indices]
             batch_original_indices = list(batch_indices)  # Keep track of original indices
@@ -186,7 +186,7 @@ class ModelDependentICLUtility:
         # Prepare batches for inference with each possible ICL example
         with_icl_batches = []
 
-        for example_prompt, example_response in zip(example_prompts, example_responses):
+        for example_prompt, example_response in tqdm(zip(example_prompts, example_responses), total=len(example_prompts), desc="create batches"):
             example = f"Instruction:\n{instruction_with_icl}\n\n\nExample:\n{example_prompt}\n{example_response}"
             with_icl_batches_for_example = []
             for batch_indices in quantiles:
@@ -285,17 +285,26 @@ if __name__ == "__main__":
 
     args.is_data = args.is_data == "True"
     
-    model_name = "microsoft/Phi-3-mini-128k-instruct" #"Qwen/Qwen2-72B-Instruct"
+    model_name = args.model_name
     threshold = 0.7
     subset_percentage = 0.3
         
     # Set up data variables for general experiments
-    fn = FolderNames(model_name, 'same_data_cache')
-    models = Models(language_model_name=model_name)
-    labels = [label.split('.')[0] for label in os.listdir(fn.dataset_pkl_folder) if 'all_data' not in label]
+    existing_data_name = args.existing_data_name[args.existing_data_name.rfind('/')+1:]
+    new_data_name = args.existing_data_name[args.existing_data_name.rfind('/')+1:]
 
-    existing_data_name = 'mix-instruct'
-    new_data_name = 'mix-instruct'
+    cache_type = "same_data_cache"
+    labels = ['mix-instruct', 'Magpie-Llama-3.1-Pro-300K-Filtered']
+    if "benchmark" in existing_data_name:
+        cache_type = "benchmark_cache"
+        labels = ['benchmark_gsm8k', 'mix-instruct', 'Magpie-Llama-3.1-Pro-300K-Filtered']
+    if "alpaca" in existing_data_name:
+        cache_type = "version_cache"
+        labels = ['alpaca', 'chatalpaca-20k']
+    fn = FolderNames(model_name, cache_type)
+
+    models = Models(language_model_name=model_name)
+
 
     # Set up data variables for the experiments
     with open(fn.visualization_cache_file, 'rb') as f:
@@ -326,8 +335,8 @@ if __name__ == "__main__":
     dataset_config_code = fn.dataset_config_file_code(existing_data_name, new_data_name)
     data.set_dataset_config_code(dataset_config_code)
 
-    queue_file = f'icl_utility_kernel_queue_{args.is_data}_{dataset_config_code}.pkl'
-    utility_file = f'icl_utility_kernel_{args.is_data}_{dataset_config_code}.pkl'
+    queue_file = f'/shared/storage-01/users/ishikaa2/delift_crc/icl_utility_kernel_queue_{args.is_data}_{dataset_config_code}.pkl'
+    utility_file = f'/shared/storage-01/users/ishikaa2/delift_crc/icl_utility_kernel_{args.is_data}_{dataset_config_code}.pkl'
     if args.is_data:
         train_prompts=data.train_new_prompts
         train_responses=data.train_new_references
@@ -342,7 +351,7 @@ if __name__ == "__main__":
     if not os.path.exists(queue_file):
         # create the queue of blocks
         n, m = len(train_prompts), len(valid_prompts)
-        block_size = 10000
+        block_size = 5000
 
         queue = []
         for i in range(0, n, block_size):
@@ -383,7 +392,7 @@ if __name__ == "__main__":
     train_responses = train_responses[current_block[0]:current_block[1]]
     valid_prompts = valid_prompts[current_block[2]:current_block[3]]
     valid_responses = valid_responses[current_block[2]:current_block[3]]
-    
+
     mod_dep = ModelDependentICLUtility(models.language_model, models.language_tokenizer)
     kernel = mod_dep.calculate_icl_utility(train_prompts, train_responses, valid_prompts, valid_responses)
 

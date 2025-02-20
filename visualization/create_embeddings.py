@@ -335,7 +335,7 @@ def parse_gsm8k():
 
 def parse_alpaca_dataset():
     full_dataset = {}
-    alpaca = load_dataset('tatsu-lab/alpaca')['test'].to_pandas()
+    alpaca = load_dataset('tatsu-lab/alpaca')['train'].to_pandas()
     alpaca['data'] = f"Instruction: {alpaca['instruction']}\nInput: {alpaca['input']}\nOutput: {alpaca['output']}"
 
     x = len(alpaca)
@@ -413,7 +413,7 @@ def main(args):
         # datasets = parse_qr_datasets()
         # qa_datasets = parse_qa_datasets()
         # datasets.update(qa_datasets)
-        datasets = parse_alpaca_datasets()
+        datasets = parse_alpaca_dataset()
     
     print('finding embeddings')
     for key in tqdm(datasets.keys()):
